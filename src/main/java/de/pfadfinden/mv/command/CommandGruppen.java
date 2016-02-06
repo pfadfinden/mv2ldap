@@ -137,6 +137,7 @@ public class CommandGruppen {
         // @todo: Namen und Beschreibung von Berechtigungsgruppe aktualisieren
 
         Set<Entry> validLdapIdentitaeten = new HashSet<Entry>();
+        Set<DefaultModification> modifications = new HashSet<DefaultModification>();
 
         for (IcaIdentitaet identitaet : identitaeten) {
             Entry ldapIdentitaet = icaRecordService.findIdentitaetById(identitaet.getId());
@@ -147,36 +148,29 @@ public class CommandGruppen {
                 logger.debug("Member #{} in Berechtigungsgruppe '{}' bereits enthalten.", identitaet.getId(), berechtigungsgruppe.getTitle());
             } else {
                 logger.debug("Member #{} in Berechtigungsgruppe '{}' hinzufuegen.", identitaet.getId(), berechtigungsgruppe.getTitle());
-                DefaultModification mod = new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "member", ldapIdentitaet.getDn().getName());
+                modifications.add(new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "member", ldapIdentitaet.getDn().getName()));
+            }
+
+            Iterator iterator = gruppeEntry.get("member").iterator();
+            while (iterator.hasNext()) {
+                Value<?> value = (Value<?>) iterator.next();
+                String identitaetDn = value.getString();
+                if(!searchDnIn(validLdapIdentitaeten,identitaetDn)){
+                    logger.debug("Identiaet {} muss als Member geloescht werden.",identitaetDn);
+                    iterator.remove();
+                }
+            }
+
+            modifications.add(new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE,gruppeEntry.get("member")));
+
+            for(DefaultModification modification : modifications){
+                if(modification == null) continue;
                 try {
-                    // todo: funktioniert das überhaupt? wird auf ldapIDENTITAET ausgeführt???
-                    connectionLDAP.modify(gruppeEntry.getDn(), mod);
+                    connectionLDAP.modify(gruppeEntry.getDn(),modification);
                 } catch (LdapException e) {
                     e.printStackTrace();
                 }
             }
-
-            Attribute attribute = gruppeEntry.get("member");
-            for( Value<?> value : attribute){
-                String identitaetDn = value.getString();
-                if(!searchDnIn(validLdapIdentitaeten,identitaetDn)){
-                    logger.debug("Identiaet {} muss als Member geloescht werden.",identitaetDn);
-                    attribute.remove(value);
-                }
-            }
-
-            DefaultModification update = new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE,attribute);
-            try {
-                connectionLDAP.modify(gruppeEntry.getDn(),update);
-            } catch (LdapException e) {
-                e.printStackTrace();
-            }
-
-            //         DefaultModification delete = new DefaultModification(ModificationOperation.REMOVE_ATTRIBUTE,attribute);
-   //         DefaultModification update = new DefaultModification(ModificationOperation.ADD_ATTRIBUTE,attribute);
-
-
-
         }
     }
 

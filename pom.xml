@@ -7,6 +7,7 @@
     <groupId>de.pfadfinden.mv</groupId>
     <artifactId>ldap-sync</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <description>Interne Applikation zur Synchronisierung ICA Mitgliederverwaltung mit zentralem LDAP Benutzerverzeichnis.</description>
 
     <dependencies>
         <dependency>

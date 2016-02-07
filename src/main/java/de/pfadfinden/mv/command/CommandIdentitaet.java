@@ -3,11 +3,10 @@ package de.pfadfinden.mv.command;
 import de.pfadfinden.mv.connector.ConnectorICA;
 import de.pfadfinden.mv.connector.ConnectorLDAP;
 import de.pfadfinden.mv.model.IcaIdentitaet;
-import de.pfadfinden.mv.model.IcaRecord;
 import de.pfadfinden.mv.service.IcaRecordService;
+import de.pfadfinden.mv.service.ica.IdentitaetService;
 import de.pfadfinden.mv.tools.LdapHelper;
 import de.pfadfinden.mv.tools.UsernameGenerator;
-import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.entry.DefaultEntry;
 import org.apache.directory.api.ldap.model.entry.DefaultModification;
 import org.apache.directory.api.ldap.model.entry.Entry;
@@ -20,24 +19,19 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Created by Philipp on 14.01.2016.
- */
 public class CommandIdentitaet {
     final Logger logger = LoggerFactory.getLogger(CommandIdentitaet.class);
 
     public static Connection connectionICA;
     public static LdapConnection connectionLDAP;
 
-    PreparedStatement icaIdentiaetenStatement;
     IcaRecordService icaRecordService;
+    IdentitaetService identitaetService;
 
     public final String icaIdentiaeten = "" +
             "SELECT *, identitaet.genericField1 AS spitzname " +
@@ -46,35 +40,53 @@ public class CommandIdentitaet {
             "ORDER BY id ASC " +
             "LIMIT 0,50";
 
-    public CommandIdentitaet() throws SQLException, LdapException, IOException {
+    public CommandIdentitaet()  {
         connectionICA = ConnectorICA.getConnection();
         connectionLDAP = ConnectorLDAP.getConnection();
         icaRecordService = new IcaRecordService();
-        icaIdentiaetenStatement = connectionICA.prepareStatement(icaIdentiaeten);
-        ResultSet icaIdentitaetenResultset = icaIdentiaetenStatement.executeQuery();
-        IcaIdentitaet icaIdentitaet;
-        while (icaIdentitaetenResultset.next()) {
-            icaIdentitaet = new IcaIdentitaet(icaIdentitaetenResultset);
-            try {
-                Entry identiaet = icaRecordService.findIdentitaetById(icaIdentitaet.getId());
-                if(identiaet == null){
-                    logger.debug("Neuanlage Identiaet #{} {}",icaIdentitaet.getId(),icaIdentitaet.getNachname());
-                    addIdentitaet(icaIdentitaet);
-                } else {
-                    logger.debug("Update Identiaet #{} {}",icaIdentitaet.getId(),icaIdentitaet.getNachname());
-                    updateIdentitaet(icaIdentitaet,identiaet);
-                }
-            } catch (Exception e) {
-                logger.error("Verarbeitung Identitaet #{} fehlgeschlagen.",icaIdentitaet.getId(),e);
-            }
+        identitaetService = new IdentitaetService();
+
+        try {
+            connectionICA.close();
+            connectionLDAP.unBind();
+            connectionLDAP.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (LdapException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-        connectionICA.close();
-        connectionLDAP.unBind();
-        connectionLDAP.close();
     }
 
+    /**
+     * Stellt sicher, dass Identitaet in LDAP vorhanden und aktuell ist.
+     * @param identitaet
+     */
+    public Entry identitaet2Ldap(int identitaet){
+        IcaIdentitaet icaIdentitaet = identitaetService.findIdentitaetById(identitaet);
 
-    private void addIdentitaet(IcaIdentitaet icaIdentitaet) throws CursorException, LdapException {
+        Entry inetOrgPerson = icaRecordService.findIdentitaetById(identitaet);
+
+        if(inetOrgPerson == null){
+            logger.debug("Identiaet #{} in LDAP nicht vorhanden. Neuanlage erforderlich.",identitaet);
+            try {
+                addIdentitaet(icaIdentitaet);
+            } catch (LdapException e) {
+                logger.error("Identiaet konnte nicht angelegt werden.",e);
+            }
+        } else {
+            logger.debug("Identitaet #{} in LDAP vorhanden. Prüfung Update erforderlich.",identitaet);
+            try {
+                updateIdentitaet(icaIdentitaet,inetOrgPerson);
+            } catch (LdapException e) {
+                logger.error("Identiaet konnte nicht aktualisiert werden.",e);
+            }
+        }
+        return icaRecordService.findIdentitaetById(identitaet);
+    }
+
+    private void addIdentitaet(IcaIdentitaet icaIdentitaet) throws LdapException {
         String username;
         try {
             username = UsernameGenerator.getUsername(icaIdentitaet.getNachname(),icaIdentitaet.getVorname());
@@ -110,8 +122,9 @@ public class CommandIdentitaet {
         entry.add("icaStatus",icaIdentitaet.getStatus());
         entry.add("icaVersion",String.valueOf(icaIdentitaet.getVersion()));
         entry.add("icaMitgliedsnummer",String.valueOf(icaIdentitaet.getMitgliedsNummer()));
-        entry.add("icaHash",icaIdentitaet.getHash());
-
+        if(icaIdentitaet.getHash() != null && !icaIdentitaet.getHash().trim().isEmpty()) {
+            entry.add("icaHash", icaIdentitaet.getHash());
+        }
         entry.add("givenName",icaIdentitaet.getVorname());
         entry.add("icaSpitzname","Test Test");
 
@@ -120,10 +133,11 @@ public class CommandIdentitaet {
         entry.add("l",icaIdentitaet.getOrt());
 
         entry.add("mail",icaIdentitaet.getEmail());
-        entry.add("mobile",icaIdentitaet.getTelefon3());
-        entry.add("telephoneNumber",icaIdentitaet.getTelefon1());
-        entry.add("facsimileTelephoneNumber",icaIdentitaet.getTelefax());
-
+     //   entry.add("mobile",icaIdentitaet.getTelefon3());
+     //   entry.add("telephoneNumber",icaIdentitaet.getTelefon1());
+     //   if(!icaIdentitaet.getTelefax().trim().isEmpty()) {
+     //       entry.add("facsimileTelephoneNumber", icaIdentitaet.getTelefax());
+     //   }
 
         Date lastUpdated;
         if(icaIdentitaet.getLastUpdated() == null){
@@ -136,7 +150,7 @@ public class CommandIdentitaet {
         entry.add("sn",icaIdentitaet.getNachname());
     //    entry.add("cn",icaIdentitaet.getVorname()+" "+icaIdentitaet.getNachname());
 
-        connectionLDAP.add(entry);
+        ConnectorLDAP.getConnection().add(entry);
         return;
     }
 

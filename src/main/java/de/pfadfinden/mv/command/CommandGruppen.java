@@ -8,6 +8,7 @@ import de.pfadfinden.mv.model.SyncTaetigkeit;
 import de.pfadfinden.mv.service.IcaRecordService;
 import de.pfadfinden.mv.service.ica.IdentitaetService;
 
+import org.apache.commons.collections.functors.ExceptionClosure;
 import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.entry.*;
 import org.apache.directory.api.ldap.model.exception.LdapException;
@@ -115,14 +116,15 @@ public class CommandGruppen {
         entry.add("icaLastUpdated",new GeneralizedTime(new Date()).toString());
 
     //    entry.add("member","cn=philipp.steinmetzger,ou=Barrakuda,ou=München (Bayern),ou=Bayern,ou=BdP,dc=example,dc=com");
+        CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 
         if(identitaeten.size() == 0) return;
         for(IcaIdentitaet identitaet: identitaeten) {
             logger.debug("Identität #{} muss hinzugefuegt werden", identitaet.getId());
-            Entry addIdentitaet = icaRecordService.findIdentitaetById(identitaet.getId());
-            if (addIdentitaet != null){
-                logger.debug("Hinzufuegen Identitaet {}",addIdentitaet.getDn().getName());
-                entry.add("member",addIdentitaet.getDn().getName());
+            Entry inetOrgPerson = commandIdentitaet.identitaet2Ldap(identitaet.getId());
+            if (inetOrgPerson != null){
+                logger.debug("Hinzufuegen Identitaet {}",inetOrgPerson.getDn().getName());
+                entry.add("member",inetOrgPerson.getDn().getName());
             } else {
                 logger.error("Identität #{} zu Gruppe nicht hinzugefuegt, da nicht in LDAP gefunden.", identitaet.getId());
                 continue;
@@ -139,21 +141,27 @@ public class CommandGruppen {
         Set<Entry> validLdapIdentitaeten = new HashSet<Entry>();
         Set<DefaultModification> modifications = new HashSet<DefaultModification>();
 
-        for (IcaIdentitaet identitaet : identitaeten) {
-            Entry ldapIdentitaet = icaRecordService.findIdentitaetById(identitaet.getId());
-            if (ldapIdentitaet == null) continue;
-            validLdapIdentitaeten.add(ldapIdentitaet);
+        CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 
-            if (gruppeEntry.contains("member", ldapIdentitaet.getDn().getName())) {
+        for (IcaIdentitaet identitaet : identitaeten) {
+
+            Entry inetOrgPerson = commandIdentitaet.identitaet2Ldap(identitaet.getId());
+            validLdapIdentitaeten.add(inetOrgPerson);
+
+            if (gruppeEntry.contains("member", inetOrgPerson.getDn().getName())) {
                 logger.debug("Member #{} in Berechtigungsgruppe '{}' bereits enthalten.", identitaet.getId(), berechtigungsgruppe.getTitle());
             } else {
                 logger.debug("Member #{} in Berechtigungsgruppe '{}' hinzufuegen.", identitaet.getId(), berechtigungsgruppe.getTitle());
-                modifications.add(new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "member", ldapIdentitaet.getDn().getName()));
+                try {
+                    gruppeEntry.get("member").add(inetOrgPerson.getDn().getName());
+                } catch (LdapInvalidAttributeValueException e) {
+                    logger.error("Konnte Member Berechtiungsgruppe nicht hinzufuegen.",e);
+                }
             }
 
             Iterator iterator = gruppeEntry.get("member").iterator();
             while (iterator.hasNext()) {
-                Value<?> value = (Value<?>) iterator.next();
+                Value<String> value = (Value<String>) iterator.next();
                 String identitaetDn = value.getString();
                 if(!searchDnIn(validLdapIdentitaeten,identitaetDn)){
                     logger.debug("Identiaet {} muss als Member geloescht werden.",identitaetDn);

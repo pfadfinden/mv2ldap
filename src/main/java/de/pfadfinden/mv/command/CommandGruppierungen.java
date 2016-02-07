@@ -40,13 +40,13 @@ public class CommandGruppierungen {
             "FROM gruppierung " +
             "LEFT JOIN ebene ON gruppierung.ebene_id = ebene.id " +
             "WHERE status='AKTIV' " +
-            "ORDER BY ebene_id,gruppierung.id ASC " +
-            "LIMIT 0,500";
+            "ORDER BY ebene_id,gruppierung.id ASC ";
 
     public CommandGruppierungen() throws Exception {
         connectionICA = ConnectorICA.getConnection();
         connectionLDAP = ConnectorLDAP.getConnection();
         icaGruppierungenStatement = connectionICA.prepareStatement(icaGruppierungen);
+        icaRecordService = new IcaRecordService();
         ResultSet icaGruppierungenResultset = icaGruppierungenStatement.executeQuery();
         IcaGruppierung gruppierung;
         while (icaGruppierungenResultset.next()) {
@@ -58,7 +58,7 @@ public class CommandGruppierungen {
         connectionLDAP.close();
     }
 
-    private void execGruppierung(IcaGruppierung gruppierung) throws CursorException, LdapException, Exception {
+    private void execGruppierung(IcaGruppierung gruppierung) throws Exception {
         logger.debug("# Start Verarbeitung Gruppierung {} ({})",gruppierung.getId(),gruppierung.getName());
         Entry gruppierungEntry = icaRecordService.findGruppierungById(gruppierung.getId());
 
@@ -89,6 +89,7 @@ public class CommandGruppierungen {
         }
 
         try {
+            if(gruppierungLdap.get("icaLastUpdated")== null) return true;
             GeneralizedTime ldapLastUpdatedGenerialized = new GeneralizedTime(gruppierungLdap.get("icaLastUpdated").getString());
             if(ldapLastUpdatedGenerialized.getDate().before(gruppierungIca.getLastUpdated())) return true;
         } catch (LdapInvalidAttributeValueException e) {
@@ -155,7 +156,9 @@ public class CommandGruppierungen {
         entry.add("icaId",String.valueOf(gruppierung.getId()));
         entry.add("icaStatus",gruppierung.getStatus());
         entry.add("icaVersion",String.valueOf(gruppierung.getVersion()));
-        entry.add("icaLastUpdated",new GeneralizedTime(gruppierung.getLastUpdated()).toString());
+        if(gruppierung.getLastUpdated() != null) {
+            entry.add("icaLastUpdated", new GeneralizedTime(gruppierung.getLastUpdated()).toString());
+        }
         entry.add("icaEbene",gruppierung.getEbeneName());
         if(!gruppierung.getSitzOrt().isEmpty()) entry.add("icaSitzOrt",gruppierung.getSitzOrt());
 

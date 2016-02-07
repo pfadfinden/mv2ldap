@@ -163,7 +163,15 @@ public class CommandIdentitaet {
 
         for(DefaultModification modification : modifications){
             if(modification == null) continue;
-            connectionLDAP.modify(ldapIdentitaet.getDn(),modification);
+            LdapConnection conn = ConnectorLDAP.getConnection();
+
+            conn.modify(ldapIdentitaet.getDn(),modification);
+            conn.unBind();
+            try {
+                conn.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         return null;

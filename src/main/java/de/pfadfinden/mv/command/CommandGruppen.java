@@ -8,7 +8,6 @@ import de.pfadfinden.mv.model.SyncTaetigkeit;
 import de.pfadfinden.mv.service.IcaRecordService;
 import de.pfadfinden.mv.service.ica.IdentitaetService;
 
-import org.apache.commons.collections.functors.ExceptionClosure;
 import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.entry.*;
 import org.apache.directory.api.ldap.model.exception.LdapException;
@@ -18,7 +17,6 @@ import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.api.LdapConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Attr;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -111,7 +109,7 @@ public class CommandGruppen {
         entry.add("ObjectClass","icaRecord");
 
         entry.add("cn",berechtigungsgruppe.getTitle());
-        entry.add("description",berechtigungsgruppe.getDescription());
+        if(berechtigungsgruppe.getDescription()!=null) entry.add("description",berechtigungsgruppe.getDescription());
         entry.add("icaId",String.valueOf(berechtigungsgruppe.getId()));
         entry.add("icaLastUpdated",new GeneralizedTime(new Date()).toString());
 
@@ -135,11 +133,26 @@ public class CommandGruppen {
         return;
     }
 
+    /**
+     * Zentrale Funktion für Aktualisierung eines groupOfName Eintrags in LDAP Directory.
+     * Es werden zunächst alle erforderlichen Änderungen analyisiert.
+     * Zunaechst Iteration ueber erforderliche Member laut ICA, wenn noch nicht vorhanden, dann hinzufuegen.
+     * Dann wird geprueft, ob Member vorhanden sind, die laut ICA nicht erforderlich sind und entsprechend geloescht.
+     * Abschließend werden alle gesammelten Modifikationen persistiert.
+     *
+     * @ToDo Name, Beschreibung aus Berechtigungsgruppe aktualisieren (@todo)
+     *
+     * @Author Philipp Steinmetzger <philipp.steinmetzger@pfadfinden.de>
+     * @param berechtigungsgruppe
+     * @param gruppeEntry
+     * @param identitaeten
+     */
     private void updateBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Entry gruppeEntry, Set<IcaIdentitaet> identitaeten) {
-        // @todo: Namen und Beschreibung von Berechtigungsgruppe aktualisieren
-
-        Set<Entry> validLdapIdentitaeten = new HashSet<Entry>();
+        // Sammlung aller Modifikationen für groupOfNames
         Set<DefaultModification> modifications = new HashSet<DefaultModification>();
+
+        // @todo: geht das nicht direkt via Set<IcaIdentitaet> identitaeten?
+        Set<Entry> validLdapIdentitaeten = new HashSet<Entry>();
 
         CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 
@@ -155,29 +168,28 @@ public class CommandGruppen {
                 try {
                     gruppeEntry.get("member").add(inetOrgPerson.getDn().getName());
                 } catch (LdapInvalidAttributeValueException e) {
-                    logger.error("Konnte Member Berechtiungsgruppe nicht hinzufuegen.",e);
+                    logger.error("Konnte Member Berechtiungsgruppe nicht hinzufuegen.", e);
                 }
             }
+        }
 
-            Iterator iterator = gruppeEntry.get("member").iterator();
-            while (iterator.hasNext()) {
-                Value<String> value = (Value<String>) iterator.next();
-                String identitaetDn = value.getString();
-                if(!searchDnIn(validLdapIdentitaeten,identitaetDn)){
-                    logger.debug("Identiaet {} muss als Member geloescht werden.",identitaetDn);
-                    iterator.remove();
-                }
+        Iterator iterator = gruppeEntry.get("member").iterator();
+        while (iterator.hasNext()) {
+            Value<String> value = (Value<String>) iterator.next();
+            String identitaetDn = value.getString();
+            if(!searchDnIn(validLdapIdentitaeten,identitaetDn)){
+                logger.debug("Identiaet {} muss als Member geloescht werden.",identitaetDn);
+                iterator.remove();
             }
+        }
+        modifications.add(new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE,gruppeEntry.get("member")));
 
-            modifications.add(new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE,gruppeEntry.get("member")));
-
-            for(DefaultModification modification : modifications){
-                if(modification == null) continue;
-                try {
-                    connectionLDAP.modify(gruppeEntry.getDn(),modification);
-                } catch (LdapException e) {
-                    e.printStackTrace();
-                }
+        for(DefaultModification modification : modifications){
+            if(modification == null) continue;
+            try {
+                connectionLDAP.modify(gruppeEntry.getDn(),modification);
+            } catch (LdapException e) {
+                e.printStackTrace();
             }
         }
     }

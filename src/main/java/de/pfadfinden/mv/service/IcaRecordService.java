@@ -1,6 +1,6 @@
 package de.pfadfinden.mv.service;
 
-import de.pfadfinden.mv.connector.ConnectorLDAP;
+import de.pfadfinden.mv.database.LdapDatabase;
 import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.cursor.EntryCursor;
 import org.apache.directory.api.ldap.model.entry.Entry;
@@ -31,7 +31,6 @@ public class IcaRecordService {
 
     private Entry findRecordById(int recordId, String objectClass){
 
-        LdapConnection connectionLDAP = ConnectorLDAP.getConnection();
         String searchString = String.format("(&(objectClass=%s)(icaId=%d))",objectClass,recordId);
         Dn dn = null;
 
@@ -40,32 +39,28 @@ public class IcaRecordService {
         try {
             dn = new Dn("dc=example,dc=com");
 
-            cursor = connectionLDAP.search(dn,searchString, SearchScope.SUBTREE);
+            LdapConnection ldapConnection = LdapDatabase.getConnection();
+            ldapConnection.bind();
+            cursor = ldapConnection.search(dn,searchString, SearchScope.SUBTREE);
+
             while ( cursor.next() )
             {
                 Entry entry = cursor.get();
                 logger.debug("Datensatz {} #{} gefunden: {}",objectClass,recordId,entry.getDn());
-                connectionLDAP.unBind();
-                connectionLDAP.close();
                 return entry;
             }
-        } catch (LdapException e) {
-            logger.error(e.getStackTrace().toString());
-        } catch (CursorException e) {
-            logger.error(e.getStackTrace().toString());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        cursor.close();
+            cursor.close();
+            ldapConnection.unBind();
+            ldapConnection.close();
 
-        try {
-            connectionLDAP.unBind();
-            connectionLDAP.close();
         } catch (LdapException e) {
-            e.printStackTrace();
+            logger.error("{}",e);
+        } catch (CursorException e) {
+            logger.error("{}",e);
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         return null;
     }
 

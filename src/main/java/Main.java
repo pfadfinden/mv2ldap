@@ -1,6 +1,8 @@
 import de.pfadfinden.mv.command.CommandGruppen;
 import de.pfadfinden.mv.command.CommandGruppierungen;
 import de.pfadfinden.mv.command.CommandIdentitaet;
+import de.pfadfinden.mv.database.IcaDatabase;
+import de.pfadfinden.mv.database.SyncDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,10 +15,13 @@ public class Main {
         logger.info("Start MV LDAP Sync");
 
         // new CommandGruppierungen();
-        // new CommandIdentitaet();
         new CommandGruppen();
 
         logger.info("Ende");
+
+        IcaDatabase.close();
+        SyncDatabase.close();
+
         long stopTime = System.nanoTime();
         long elapsedTime = stopTime-startTime;
         double seconds = (double)elapsedTime / 1000000000.0;

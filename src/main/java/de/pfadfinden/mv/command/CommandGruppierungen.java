@@ -1,38 +1,30 @@
 package de.pfadfinden.mv.command;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.ParseException;
-import java.util.Date;
 
-import de.pfadfinden.mv.connector.ConnectorLDAP;
+import de.pfadfinden.mv.database.IcaDatabase;
+import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.model.IcaGruppierung;
 import de.pfadfinden.mv.service.IcaRecordService;
 import de.pfadfinden.mv.tools.LdapHelper;
-import org.apache.directory.api.ldap.model.cursor.CursorException;
-import org.apache.directory.api.ldap.model.cursor.EntryCursor;
 import org.apache.directory.api.ldap.model.entry.*;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueException;
-import org.apache.directory.api.ldap.model.message.SearchScope;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.name.Rdn;
 import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.api.LdapConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import de.pfadfinden.mv.connector.ConnectorICA;
 
 public class CommandGruppierungen {
     final Logger logger = LoggerFactory.getLogger(CommandGruppierungen.class);
 
-    public static Connection connectionICA;
-    public static LdapConnection connectionLDAP;
-
     public IcaRecordService icaRecordService;
-
-    PreparedStatement icaGruppierungenStatement;
 
     public final String icaGruppierungen = "" +
             "SELECT gruppierung.id,gruppierung.name,nummer,ebene_id,parent_gruppierung_id,status,migrationID,alteID," +
@@ -43,19 +35,20 @@ public class CommandGruppierungen {
             "ORDER BY ebene_id,gruppierung.id ASC ";
 
     public CommandGruppierungen() throws Exception {
-        connectionICA = ConnectorICA.getConnection();
-        connectionLDAP = ConnectorLDAP.getConnection();
-        icaGruppierungenStatement = connectionICA.prepareStatement(icaGruppierungen);
         icaRecordService = new IcaRecordService();
-        ResultSet icaGruppierungenResultset = icaGruppierungenStatement.executeQuery();
         IcaGruppierung gruppierung;
-        while (icaGruppierungenResultset.next()) {
-            gruppierung = new IcaGruppierung(icaGruppierungenResultset);
-            execGruppierung(gruppierung);
+
+        try(
+            Connection connection = IcaDatabase.getConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(icaGruppierungen);
+        ){
+            try (ResultSet icaGruppierungenResultset = preparedStatement.executeQuery()) {
+                while (icaGruppierungenResultset.next()) {
+                    gruppierung = new IcaGruppierung(icaGruppierungenResultset);
+                    execGruppierung(gruppierung);
+                }
+            }
         }
-        connectionICA.close();
-        connectionLDAP.unBind();
-        connectionLDAP.close();
     }
 
     private void execGruppierung(IcaGruppierung gruppierung) throws Exception {
@@ -114,16 +107,27 @@ public class CommandGruppierungen {
     //    DefaultModification ouMod = checkAttributeValue(gruppierungLdap,gruppierungIca.getName(),"ou");
     //    if(ouMod != null) connectionLDAP.modify(gruppierungLdap.getDn(),ouMod);
 
+        LdapConnection ldapConnection = LdapDatabase.getConnection();
+        ldapConnection.bind();
+
         DefaultModification icaEbeneMod = LdapHelper.checkAttributeValue(gruppierungLdap,gruppierungIca,gruppierungIca.getEbeneName(),"icaEbene");
-        if(icaEbeneMod != null) connectionLDAP.modify(gruppierungLdap.getDn(),icaEbeneMod);
+        if(icaEbeneMod != null) ldapConnection.modify(gruppierungLdap.getDn(),icaEbeneMod);
         DefaultModification icaStatusMod = LdapHelper.checkAttributeValue(gruppierungLdap,gruppierungIca,gruppierungIca.getStatus(),"icaStatus");
-        if(icaStatusMod != null) connectionLDAP.modify(gruppierungLdap.getDn(),icaStatusMod);
+        if(icaStatusMod != null) ldapConnection.modify(gruppierungLdap.getDn(),icaStatusMod);
         DefaultModification icaVersionMod = LdapHelper.checkAttributeValue(gruppierungLdap,gruppierungIca,gruppierungIca.getVersion(),"icaVersion");
-        if(icaVersionMod != null) connectionLDAP.modify(gruppierungLdap.getDn(),icaVersionMod);
+        if(icaVersionMod != null) ldapConnection.modify(gruppierungLdap.getDn(),icaVersionMod);
         DefaultModification icaSitzOrt = LdapHelper.checkAttributeValue(gruppierungLdap,gruppierungIca,gruppierungIca.getSitzOrt(),"icaSitzOrt");
-        if(icaSitzOrt != null) connectionLDAP.modify(gruppierungLdap.getDn(),icaSitzOrt);
+        if(icaSitzOrt != null) ldapConnection.modify(gruppierungLdap.getDn(),icaSitzOrt);
         DefaultModification icaLastUpdatedMod = LdapHelper.checkAttributeValue(gruppierungLdap,gruppierungIca,gruppierungIca.getLastUpdated(),"icaLastUpdated");
-        if(icaLastUpdatedMod != null) connectionLDAP.modify(gruppierungLdap.getDn(),icaLastUpdatedMod);
+        if(icaLastUpdatedMod != null) ldapConnection.modify(gruppierungLdap.getDn(),icaLastUpdatedMod);
+
+        ldapConnection.unBind();
+        try {
+            ldapConnection.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private void addGruppierung(IcaGruppierung gruppierung) throws Exception {
@@ -165,7 +169,16 @@ public class CommandGruppierungen {
         entry.setDn(dn);
         logger.debug(dn.toString());
 
-        connectionLDAP.add(entry);
+        LdapConnection ldapConnection = LdapDatabase.getConnection();
+        ldapConnection.bind();
+        ldapConnection.add(entry);
+        ldapConnection.unBind();
+        try {
+            ldapConnection.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         return;
 
     }

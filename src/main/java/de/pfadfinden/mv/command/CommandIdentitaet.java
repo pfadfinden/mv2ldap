@@ -1,7 +1,6 @@
 package de.pfadfinden.mv.command;
 
-import de.pfadfinden.mv.connector.ConnectorICA;
-import de.pfadfinden.mv.connector.ConnectorLDAP;
+import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.model.IcaIdentitaet;
 import de.pfadfinden.mv.service.IcaRecordService;
 import de.pfadfinden.mv.service.ica.IdentitaetService;
@@ -18,17 +17,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 public class CommandIdentitaet {
     final Logger logger = LoggerFactory.getLogger(CommandIdentitaet.class);
-
-    public static Connection connectionICA;
-    public static LdapConnection connectionLDAP;
 
     IcaRecordService icaRecordService;
     IdentitaetService identitaetService;
@@ -41,22 +35,8 @@ public class CommandIdentitaet {
             "LIMIT 0,50";
 
     public CommandIdentitaet()  {
-        connectionICA = ConnectorICA.getConnection();
-        connectionLDAP = ConnectorLDAP.getConnection();
         icaRecordService = new IcaRecordService();
         identitaetService = new IdentitaetService();
-
-        try {
-            connectionICA.close();
-            connectionLDAP.unBind();
-            connectionLDAP.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (LdapException e) {
-            e.printStackTrace();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
@@ -150,7 +130,16 @@ public class CommandIdentitaet {
         entry.add("sn",icaIdentitaet.getNachname());
     //    entry.add("cn",icaIdentitaet.getVorname()+" "+icaIdentitaet.getNachname());
 
-        ConnectorLDAP.getConnection().add(entry);
+        LdapConnection ldapConnection = LdapDatabase.getConnection();
+        ldapConnection.bind();
+        ldapConnection.add(entry);
+        ldapConnection.unBind();
+        try {
+            ldapConnection.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         return;
     }
 
@@ -163,12 +152,14 @@ public class CommandIdentitaet {
 
         for(DefaultModification modification : modifications){
             if(modification == null) continue;
-            LdapConnection conn = ConnectorLDAP.getConnection();
 
-            conn.modify(ldapIdentitaet.getDn(),modification);
-            conn.unBind();
+            LdapConnection ldapConnection = LdapDatabase.getConnection();
+            ldapConnection.bind();
+            ldapConnection.modify(ldapIdentitaet.getDn(),modification);
+
+            ldapConnection.unBind();
             try {
-                conn.close();
+                ldapConnection.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }

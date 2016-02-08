@@ -1,6 +1,6 @@
 package de.pfadfinden.mv.service.ica;
 
-import de.pfadfinden.mv.connector.ConnectorICA;
+import de.pfadfinden.mv.database.IcaDatabase;
 import de.pfadfinden.mv.model.IcaIdentitaet;
 import de.pfadfinden.mv.model.SyncBerechtigungsgruppe;
 import de.pfadfinden.mv.model.SyncTaetigkeit;
@@ -17,7 +17,6 @@ import java.util.Set;
 public class IdentitaetService {
     final Logger logger = LoggerFactory.getLogger(IdentitaetService.class);
 
-
     private String icaIdentiaeten = "" +
             "SELECT identitaet.*, identitaet.genericField1 AS spitzname " +
             "FROM taetigkeitassignment LEFT JOIN identitaet ON taetigkeitassignment.mitglied_id = identitaet.id " +
@@ -27,20 +26,7 @@ public class IdentitaetService {
             "FROM identitaet " +
             "WHERE id=?";
 
-    private Connection connectionICA;
-    private PreparedStatement identitaetenByTaetigkeitStatement;
-    private PreparedStatement findIdentitaetByIdStatement;
-
-    public IdentitaetService(){
-        try {
-            connectionICA = ConnectorICA.getConnection();
-            identitaetenByTaetigkeitStatement = connectionICA.prepareStatement(icaIdentiaeten);
-            findIdentitaetByIdStatement = connectionICA.prepareStatement(findIdentitaetById);
-//            connectionICA.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
+    public IdentitaetService(){}
 
     /**
      * Suche in ICA alle Identitaeten, die der SyncTätigkeit entsprechen.
@@ -49,15 +35,16 @@ public class IdentitaetService {
      */
     public Set<IcaIdentitaet> findIdentitaetByTaetigkeit(SyncTaetigkeit syncTaetigkeit) throws SQLException {
         Set<IcaIdentitaet> icaIdentitaeten = new HashSet<IcaIdentitaet>();
-
-        identitaetenByTaetigkeitStatement.clearParameters();
-        identitaetenByTaetigkeitStatement.setInt(1,syncTaetigkeit.getTaetigkeit_id());
-        ResultSet results = identitaetenByTaetigkeitStatement.executeQuery();
-
-        IcaIdentitaet icaIdentitaet;
-        while (results.next()) {
-            icaIdentitaet = new IcaIdentitaet(results);
-            icaIdentitaeten.add(icaIdentitaet);
+        try (
+                Connection connection = IcaDatabase.getConnection();
+                PreparedStatement identitaetenByTaetigkeitStatement = connection.prepareStatement(icaIdentiaeten);
+        ) {
+            identitaetenByTaetigkeitStatement.setInt(1,syncTaetigkeit.getTaetigkeit_id());
+            try (ResultSet results = identitaetenByTaetigkeitStatement.executeQuery()) {
+                while (results.next()) {
+                    icaIdentitaeten.add(new IcaIdentitaet(results));
+                }
+            }
         }
         if(icaIdentitaeten.size()==0) return null;
         return icaIdentitaeten;
@@ -75,20 +62,19 @@ public class IdentitaetService {
     }
 
     public IcaIdentitaet findIdentitaetById(int icaIdentitaet){
-        try {
-            findIdentitaetByIdStatement.clearParameters();
+        try (
+            Connection connection = IcaDatabase.getConnection();
+            PreparedStatement findIdentitaetByIdStatement = connection.prepareStatement(findIdentitaetById);
+        ){
             findIdentitaetByIdStatement.setInt(1,icaIdentitaet);
-            ResultSet results = findIdentitaetByIdStatement.executeQuery();
-            while (results.next()) {
-                return new IcaIdentitaet(results);
+            try (ResultSet results = findIdentitaetByIdStatement.executeQuery()) {
+                while (results.next()) {
+                    return new IcaIdentitaet(results);
+                }
             }
         } catch (SQLException e) {
             logger.error("Fehler bei Zugriff auf ICA.",e);
         }
-
-       // finally {
-       //     logger.error("Identität #{} in ICA nicht gefunden.",icaIdentitaet);
-            return null;
-       // }
+        return null;
     }
 }

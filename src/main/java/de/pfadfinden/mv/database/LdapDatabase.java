@@ -1,7 +1,5 @@
 package de.pfadfinden.mv.database;
 
-import org.apache.directory.api.ldap.model.exception.LdapException;
-import org.apache.directory.ldap.client.api.LdapConnection;
 import org.apache.directory.ldap.client.api.LdapConnectionConfig;
 import org.apache.directory.ldap.client.api.LdapConnectionPool;
 import org.apache.directory.ldap.client.api.ValidatingPoolableLdapConnectionFactory;
@@ -12,8 +10,7 @@ public final class LdapDatabase {
 
     private LdapDatabase() {}
 
-    public static LdapConnection getConnection() {
-
+    public static LdapConnectionPool getConnectionPool() {
         if (pool == null){
             LdapConnectionConfig config = new LdapConnectionConfig();
             config.setLdapHost( "localhost" );
@@ -21,11 +18,6 @@ public final class LdapDatabase {
             ValidatingPoolableLdapConnectionFactory factory = new ValidatingPoolableLdapConnectionFactory(config);
             pool = new LdapConnectionPool(factory);
         }
-        try {
-            return pool.getConnection();
-        } catch (LdapException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return pool;
     }
 }

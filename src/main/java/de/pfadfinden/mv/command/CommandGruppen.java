@@ -1,20 +1,22 @@
 package de.pfadfinden.mv.command;
 
-import de.pfadfinden.mv.database.LdapDatabase;
+import de.pfadfinden.mv.database.LdapTemplateDatabase;
 import de.pfadfinden.mv.database.SyncDatabase;
+import de.pfadfinden.mv.ldap.EntryServiceLdap;
+import de.pfadfinden.mv.ldap.schema.Gruppe;
 import de.pfadfinden.mv.model.IcaIdentitaet;
 import de.pfadfinden.mv.model.SyncBerechtigungsgruppe;
 import de.pfadfinden.mv.model.SyncTaetigkeit;
-import de.pfadfinden.mv.service.IcaRecordService;
 import de.pfadfinden.mv.service.ica.IdentitaetService;
 
 import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.entry.*;
 import org.apache.directory.api.ldap.model.exception.LdapException;
-import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueException;
+import org.apache.directory.api.ldap.model.message.*;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.util.GeneralizedTime;
-import org.apache.directory.ldap.client.api.LdapConnection;
+import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
+import org.apache.directory.ldap.client.template.RequestBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,8 +32,6 @@ public class CommandGruppen {
 
     private IdentitaetService identitaetService;
 
-    IcaRecordService icaRecordService;
-
     public final String syncGruppen = "SELECT * FROM berechtigungsgruppe " +
             "WHERE deleted = 0 " +
             "ORDER BY id ASC ";
@@ -42,7 +42,6 @@ public class CommandGruppen {
 
     public CommandGruppen() throws SQLException, LdapException, IOException {
 
-        icaRecordService = new IcaRecordService();
         identitaetService = new IdentitaetService();
 
         SyncBerechtigungsgruppe berechtigungsgruppe;
@@ -68,18 +67,15 @@ public class CommandGruppen {
 
     private void execBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Set<IcaIdentitaet> identitaeten) throws CursorException, LdapException, Exception {
         logger.info("## Berechtigungsgruppe #{} '{}' ##",berechtigungsgruppe.getId(),berechtigungsgruppe.getTitle());
-        Entry gruppierungEntry = icaRecordService.findBerechtigungsgruppe(berechtigungsgruppe.getId());
 
-        if(gruppierungEntry == null){
+        Gruppe gruppe = EntryServiceLdap.findGruppeById(berechtigungsgruppe.getId());
+
+        if(gruppe == null){
             logger.info("Berechtigungsgruppe in LDAP nicht vorhanden.");
             addBerechtigungsgruppe(berechtigungsgruppe,identitaeten);
         } else {
-            logger.info("Berechtigungsgruppe in LDAP vorhanden: {}",gruppierungEntry.getDn());
-
-            updateBerechtigungsgruppe(berechtigungsgruppe,gruppierungEntry,identitaeten);
-//            if(needUpdateGruppierung(gruppierung,gruppierungEntry)){
-//                updateGruppierung(gruppierung,gruppierungEntry);
-//            }
+            logger.info("Berechtigungsgruppe in LDAP vorhanden: {}",gruppe.getDn());
+            updateBerechtigungsgruppe(berechtigungsgruppe,gruppe,identitaeten);
         }
     }
 
@@ -94,120 +90,66 @@ public class CommandGruppen {
 
         logger.debug("DN: {}",dn);
 
-        Entry entry = new DefaultEntry();
-        entry.setDn(dn);
-        entry.add("ObjectClass","groupOfNames");
-        entry.add("ObjectClass","icaRecord");
-
-        entry.add("cn",berechtigungsgruppe.getTitle());
-        if(berechtigungsgruppe.getDescription()!=null) entry.add("description",berechtigungsgruppe.getDescription());
-        entry.add("icaId",String.valueOf(berechtigungsgruppe.getId()));
-        entry.add("icaLastUpdated",new GeneralizedTime(new Date()).toString());
-
-    //    entry.add("member","cn=philipp.steinmetzger,ou=Barrakuda,ou=München (Bayern),ou=Bayern,ou=BdP,dc=example,dc=com");
         CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 
-        if(identitaeten.size() == 0) return;
-        for(IcaIdentitaet identitaet: identitaeten) {
-            logger.debug("Identität #{} muss hinzugefuegt werden", identitaet.getId());
-            Entry inetOrgPerson = commandIdentitaet.identitaet2Ldap(identitaet.getId());
-            if (inetOrgPerson != null){
-                logger.debug("Hinzufuegen Identitaet {}",inetOrgPerson.getDn().getName());
-                entry.add("member",inetOrgPerson.getDn().getName());
-            } else {
-                logger.error("Identität #{} zu Gruppe nicht hinzugefuegt, da nicht in LDAP gefunden.", identitaet.getId());
-                continue;
-            }
+        AddResponse addResponse = LdapTemplateDatabase.getLdapConnectionTemplate().add(
+                dn,
+                new RequestBuilder<AddRequest>() {
+                    @Override
+                    public void buildRequest(AddRequest request) throws LdapException {
+                        Entry entry = request.getEntry();
+                        entry.add("ObjectClass","groupOfNames", "icaRecord");
+                        if(berechtigungsgruppe.getDescription()!=null) entry.add("description",berechtigungsgruppe.getDescription());
+                        entry.add("icaId",String.valueOf(berechtigungsgruppe.getId()));
+                        entry.add("icaLastUpdated",new GeneralizedTime(new Date()).toString());
+
+                        if(identitaeten.size() == 0) return;
+                        for(IcaIdentitaet identitaet: identitaeten) {
+                            logger.debug("Identität #{} muss hinzugefuegt werden", identitaet.getId());
+                            de.pfadfinden.mv.ldap.schema.IcaIdentitaet inetOrgPerson = commandIdentitaet.identitaet2Ldap(identitaet.getId());
+                            if (inetOrgPerson != null){
+                                logger.debug("Hinzufuegen Identitaet {}",inetOrgPerson.getDn().getName());
+                                entry.add("member",inetOrgPerson.getDn().getName());
+                            } else {
+                                logger.error("Identität #{} zu Gruppe nicht hinzugefuegt, da nicht in LDAP gefunden.", identitaet.getId());
+                                continue;
+                            }
+                        }
+
+                    }
+                }
+        );
+
+        if (addResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
+            logger.error(addResponse.getLdapResult().getDiagnosticMessage());
         }
 
-        LdapConnection ldapConnection = LdapDatabase.getConnection();
-        ldapConnection.bind();
-        ldapConnection.add(entry);
-        ldapConnection.unBind();
-        try {
-            ldapConnection.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         return;
     }
 
-    /**
-     * Zentrale Funktion für Aktualisierung eines groupOfName Eintrags in LDAP Directory.
-     * Es werden zunächst alle erforderlichen Änderungen analyisiert.
-     * Zunaechst Iteration ueber erforderliche Member laut ICA, wenn noch nicht vorhanden, dann hinzufuegen.
-     * Dann wird geprueft, ob Member vorhanden sind, die laut ICA nicht erforderlich sind und entsprechend geloescht.
-     * Abschließend werden alle gesammelten Modifikationen persistiert.
-     *
-     * @ToDo Name, Beschreibung aus Berechtigungsgruppe aktualisieren (@todo)
-     *
-     * @Author Philipp Steinmetzger <philipp.steinmetzger@pfadfinden.de>
-     * @param berechtigungsgruppe
-     * @param gruppeEntry
-     * @param identitaeten
-     */
-    private void updateBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Entry gruppeEntry, Set<IcaIdentitaet> identitaeten) {
-        // Sammlung aller Modifikationen für groupOfNames
-        Set<DefaultModification> modifications = new HashSet<DefaultModification>();
-
-        // @todo: geht das nicht direkt via Set<IcaIdentitaet> identitaeten?
-        Set<Entry> validLdapIdentitaeten = new HashSet<Entry>();
+    private void updateBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Gruppe gruppeLdap, Set<IcaIdentitaet> identitaeten) {
+        LdapConnectionTemplate ldapConnectionTemplate = LdapTemplateDatabase.getLdapConnectionTemplate();
 
         CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 
-        for (IcaIdentitaet identitaet : identitaeten) {
-
-            Entry inetOrgPerson = commandIdentitaet.identitaet2Ldap(identitaet.getId());
-            validLdapIdentitaeten.add(inetOrgPerson);
-
-            if (gruppeEntry.contains("member", inetOrgPerson.getDn().getName())) {
-                logger.debug("Member #{} in Berechtigungsgruppe '{}' bereits enthalten.", identitaet.getId(), berechtigungsgruppe.getTitle());
-            } else {
-                logger.debug("Member #{} in Berechtigungsgruppe '{}' hinzufuegen.", identitaet.getId(), berechtigungsgruppe.getTitle());
-                try {
-                    gruppeEntry.get("member").add(inetOrgPerson.getDn().getName());
-                } catch (LdapInvalidAttributeValueException e) {
-                    logger.error("Konnte Member Berechtiungsgruppe nicht hinzufuegen.", e);
+        ModifyResponse modifyResponse = ldapConnectionTemplate.modify(
+                ldapConnectionTemplate.newDn(gruppeLdap.getDn().toString()),
+                new RequestBuilder<ModifyRequest>() {
+                    @Override
+                    public void buildRequest(ModifyRequest request) throws LdapException {
+                        request.remove("member");
+                        for(IcaIdentitaet identitaet : identitaeten){
+                            de.pfadfinden.mv.ldap.schema.IcaIdentitaet inetOrgPerson = commandIdentitaet.identitaet2Ldap(identitaet.getId());
+                            request.add("member",inetOrgPerson.getDn().getName());
+                        }
+                    }
                 }
-            }
-        }
+        );
 
-        Iterator iterator = gruppeEntry.get("member").iterator();
-        while (iterator.hasNext()) {
-            Value<String> value = (Value<String>) iterator.next();
-            String identitaetDn = value.getString();
-            if(!searchDnIn(validLdapIdentitaeten,identitaetDn)){
-                logger.debug("Identiaet {} muss als Member geloescht werden.",identitaetDn);
-                iterator.remove();
-            }
+        if (modifyResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
+            logger.error(modifyResponse.getLdapResult().getDiagnosticMessage());
         }
-        modifications.add(new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE,gruppeEntry.get("member")));
-
-        for(DefaultModification modification : modifications){
-            if(modification == null) continue;
-            try {
-                LdapConnection ldapConnection = LdapDatabase.getConnection();
-                ldapConnection.bind();
-                ldapConnection.modify(gruppeEntry.getDn(),modification);
-                ldapConnection.unBind();
-                try {
-                    ldapConnection.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                return;
-
-            } catch (LdapException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private boolean searchDnIn(Set<Entry> entrySet, String line){
-        for(Entry entry: entrySet){
-            if(entry.getDn().getName().equals(line)) return true;
-        }
-        return false;
+        return;
     }
 
     private List<SyncTaetigkeit> getTaetigkeitenZuBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe) throws SQLException {
@@ -223,7 +165,6 @@ public class CommandGruppen {
                     taetigkeiten.add(new SyncTaetigkeit(resultSet));
                 }
             }
-
         }
 
         return taetigkeiten;

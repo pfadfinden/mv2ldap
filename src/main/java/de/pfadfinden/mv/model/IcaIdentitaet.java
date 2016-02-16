@@ -6,8 +6,6 @@ import java.util.Date;
 
 public class IcaIdentitaet extends IcaRecord{
 
-    public IcaIdentitaet(){}
-
     public IcaIdentitaet(ResultSet rs) throws SQLException {
         setId(rs.getInt("id"));
         this.mglType = rs.getString("mglType");

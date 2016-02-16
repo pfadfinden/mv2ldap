@@ -1,6 +1,6 @@
 package de.pfadfinden.mv.command;
 
-import de.pfadfinden.mv.database.LdapTemplateDatabase;
+import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.ldap.EntryServiceLdap;
 import de.pfadfinden.mv.ldap.schema.IcaGruppierung;
 import de.pfadfinden.mv.model.IcaIdentitaet;
@@ -17,15 +17,10 @@ import org.apache.directory.ldap.client.template.RequestBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Date;
-
 public class CommandIdentitaet {
     final Logger logger = LoggerFactory.getLogger(CommandIdentitaet.class);
 
-    IdentitaetService identitaetService;
-
-    public CommandIdentitaet()  {
-        identitaetService = new IdentitaetService();
+    public CommandIdentitaet(){
     }
 
     /**
@@ -33,7 +28,7 @@ public class CommandIdentitaet {
      * @param identitaet
      */
     public de.pfadfinden.mv.ldap.schema.IcaIdentitaet identitaet2Ldap(int identitaet){
-        IcaIdentitaet icaIdentitaet = identitaetService.findIdentitaetById(identitaet);
+        IcaIdentitaet icaIdentitaet = IdentitaetService.findIdentitaetById(identitaet);
 
         de.pfadfinden.mv.ldap.schema.IcaIdentitaet ldapIdentitaet = EntryServiceLdap.findIcaIdentitaetById(identitaet);
 
@@ -96,7 +91,7 @@ public class CommandIdentitaet {
      //   }
     //    schema.add("cn",icaIdentitaet.getVorname()+" "+icaIdentitaet.getNachname());
 
-        LdapConnectionTemplate ldapConnectionTemplate = LdapTemplateDatabase.getLdapConnectionTemplate();
+        LdapConnectionTemplate ldapConnectionTemplate = LdapDatabase.getLdapConnectionTemplate();
 
         AddResponse addResponse = ldapConnectionTemplate.add(
                 dn,
@@ -139,8 +134,8 @@ public class CommandIdentitaet {
 
     private void updateIdentitaet(IcaIdentitaet icaIdentitaet, de.pfadfinden.mv.ldap.schema.IcaIdentitaet ldapIdentitaet){
         logger.debug("Identitaet #{} in LDAP vorhanden, aber Update erforderlich.",icaIdentitaet.getId());
-        ModifyResponse modResponse = LdapTemplateDatabase.getLdapConnectionTemplate().modify(
-                LdapTemplateDatabase.getLdapConnectionTemplate().newDn(ldapIdentitaet.getDn().toString()),
+        ModifyResponse modResponse = LdapDatabase.getLdapConnectionTemplate().modify(
+                LdapDatabase.getLdapConnectionTemplate().newDn(ldapIdentitaet.getDn().toString()),
                 new RequestBuilder<ModifyRequest>() {
                     @Override
                     public void buildRequest(ModifyRequest request) throws LdapException

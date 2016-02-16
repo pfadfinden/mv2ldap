@@ -1,6 +1,6 @@
 package de.pfadfinden.mv.ldap;
 
-import de.pfadfinden.mv.database.LdapTemplateDatabase;
+import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.ldap.schema.Gruppe;
 import de.pfadfinden.mv.ldap.schema.IcaGruppierung;
 import de.pfadfinden.mv.ldap.schema.IcaIdentitaet;
@@ -24,7 +24,7 @@ public class EntryServiceLdap {
     public static Object findIcaById(EntryMapper mapper, String record, int identitaetId){
         String baseDn = "dc=example,dc=com";
         String searchString = String.format("(&(objectClass=%s)(icaId=%d))",record,identitaetId);
-        return LdapTemplateDatabase.getLdapConnectionTemplate().searchFirst(baseDn,searchString, SearchScope.SUBTREE, mapper);
+        return LdapDatabase.getLdapConnectionTemplate().searchFirst(baseDn,searchString, SearchScope.SUBTREE, mapper);
     }
 
 }

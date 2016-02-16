@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.util.Date;
 
 import de.pfadfinden.mv.database.IcaDatabase;
-import de.pfadfinden.mv.database.LdapTemplateDatabase;
+import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.ldap.EntryServiceLdap;
 import de.pfadfinden.mv.model.IcaGruppierung;
 import de.pfadfinden.mv.tools.LdapHelper;
@@ -83,8 +83,8 @@ public class CommandGruppierungen {
      */
     private void updateGruppierung(IcaGruppierung gruppierungIca, de.pfadfinden.mv.ldap.schema.IcaGruppierung gruppierungLdap) throws LdapException {
         //    Keine Modifikation der OU (Bestandteil DN) durchfuehren
-        ModifyResponse modResponse = LdapTemplateDatabase.getLdapConnectionTemplate().modify(
-                LdapTemplateDatabase.getLdapConnectionTemplate().newDn(gruppierungLdap.getDn().toString()),
+        ModifyResponse modResponse = LdapDatabase.getLdapConnectionTemplate().modify(
+                LdapDatabase.getLdapConnectionTemplate().newDn(gruppierungLdap.getDn().toString()),
                 new RequestBuilder<ModifyRequest>() {
                     @Override
                     public void buildRequest(ModifyRequest request) throws LdapException
@@ -126,7 +126,7 @@ public class CommandGruppierungen {
             );
         }
 
-        LdapTemplateDatabase.getLdapConnectionTemplate().add(
+        LdapDatabase.getLdapConnectionTemplate().add(
                 dn,
                 new RequestBuilder<AddRequest>() {
                     @Override

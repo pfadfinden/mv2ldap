@@ -1,6 +1,6 @@
 package de.pfadfinden.mv.command;
 
-import de.pfadfinden.mv.database.LdapTemplateDatabase;
+import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.database.SyncDatabase;
 import de.pfadfinden.mv.ldap.EntryServiceLdap;
 import de.pfadfinden.mv.ldap.schema.Gruppe;
@@ -30,7 +30,6 @@ import java.util.*;
 public class CommandGruppen {
     final Logger logger = LoggerFactory.getLogger(CommandGruppen.class);
 
-    private IdentitaetService identitaetService;
 
     public final String syncGruppen = "SELECT * FROM berechtigungsgruppe " +
             "WHERE deleted = 0 " +
@@ -42,8 +41,6 @@ public class CommandGruppen {
 
     public CommandGruppen() throws SQLException, LdapException, IOException {
 
-        identitaetService = new IdentitaetService();
-
         SyncBerechtigungsgruppe berechtigungsgruppe;
 
         try (
@@ -54,7 +51,7 @@ public class CommandGruppen {
             while (resultSet.next()) {
                 berechtigungsgruppe = new SyncBerechtigungsgruppe(resultSet);
                 berechtigungsgruppe.setTaetigkeiten(getTaetigkeitenZuBerechtigungsgruppe(berechtigungsgruppe));
-                Set<IcaIdentitaet> identitaetenZurBerechtigungsgruppe = identitaetService.findIdentitaetByBerechtigungsgruppe(berechtigungsgruppe);
+                Set<IcaIdentitaet> identitaetenZurBerechtigungsgruppe = IdentitaetService.findIdentitaetByBerechtigungsgruppe(berechtigungsgruppe);
                 try {
                     execBerechtigungsgruppe(berechtigungsgruppe, identitaetenZurBerechtigungsgruppe);
                 } catch (Exception e) {
@@ -92,7 +89,7 @@ public class CommandGruppen {
 
         CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 
-        AddResponse addResponse = LdapTemplateDatabase.getLdapConnectionTemplate().add(
+        AddResponse addResponse = LdapDatabase.getLdapConnectionTemplate().add(
                 dn,
                 new RequestBuilder<AddRequest>() {
                     @Override
@@ -128,7 +125,7 @@ public class CommandGruppen {
     }
 
     private void updateBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Gruppe gruppeLdap, Set<IcaIdentitaet> identitaeten) {
-        LdapConnectionTemplate ldapConnectionTemplate = LdapTemplateDatabase.getLdapConnectionTemplate();
+        LdapConnectionTemplate ldapConnectionTemplate = LdapDatabase.getLdapConnectionTemplate();
 
         CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 

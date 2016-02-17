@@ -6,14 +6,16 @@ import org.apache.directory.ldap.client.api.LdapConnectionConfig;
 import org.apache.directory.ldap.client.api.LdapConnectionPool;
 import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
  * Created by Philipp on 10.02.2016.
  */
 public class LdapDatabase {
+
+    public LdapDatabase(){}
 
     private static LdapConnectionTemplate ldapConnectionTemplate;
 
@@ -28,7 +30,8 @@ public class LdapDatabase {
 
         Properties prop = new Properties();
         try {
-            prop.load(new FileInputStream("src/main/resources/databaseLdap.properties"));
+            InputStream input = LdapDatabase.class.getResourceAsStream("/databaseLdap.properties");
+            prop.load(input);
         } catch (IOException e) {
             e.printStackTrace();
         }

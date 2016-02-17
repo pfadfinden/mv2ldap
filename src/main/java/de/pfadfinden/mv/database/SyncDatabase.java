@@ -7,7 +7,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 public final class SyncDatabase {
-    private static final HikariConfig config = new HikariConfig("src/main/resources/databaseSync.properties");
+    private static final HikariConfig config = new HikariConfig("/databaseSync.properties");
     private static final HikariDataSource dataSource = new HikariDataSource(config);
 
     // Privater Konstruktur verhindert Instanziierung durch Client

@@ -27,6 +27,8 @@ buildNumber.properties
 ## IntelliJ
 /.idea/
 
+/out/
+
 ## File-based project format:
 *.iws
 

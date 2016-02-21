@@ -10,7 +10,8 @@ import de.pfadfinden.mv.model.SyncTaetigkeit;
 import de.pfadfinden.mv.service.ica.IdentitaetService;
 
 import org.apache.directory.api.ldap.model.cursor.CursorException;
-import org.apache.directory.api.ldap.model.entry.*;
+
+import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.message.*;
 import org.apache.directory.api.ldap.model.name.Dn;
@@ -25,7 +26,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
 public class CommandGruppen {
     final Logger logger = LoggerFactory.getLogger(CommandGruppen.class);
@@ -50,6 +54,7 @@ public class CommandGruppen {
         ) {
             while (resultSet.next()) {
                 berechtigungsgruppe = new SyncBerechtigungsgruppe(resultSet);
+
                 berechtigungsgruppe.setTaetigkeiten(getTaetigkeitenZuBerechtigungsgruppe(berechtigungsgruppe));
                 Set<IcaIdentitaet> identitaetenZurBerechtigungsgruppe = IdentitaetService.findIdentitaetByBerechtigungsgruppe(berechtigungsgruppe);
                 try {
@@ -76,21 +81,19 @@ public class CommandGruppen {
         }
     }
 
-    private void addBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Set<IcaIdentitaet> identitaeten) throws CursorException, LdapException {
+    private void addBerechtigungsgruppe(final SyncBerechtigungsgruppe berechtigungsgruppe, final Set<IcaIdentitaet> identitaeten) throws CursorException, LdapException {
 
-        String baseDn = "dc=example,dc=com";
-
-        Dn dn = new Dn(
+        Dn baseDn = new Dn(
                 "cn", berechtigungsgruppe.getTitle(),
-                baseDn
+                LdapDatabase.getBaseDn().getName()
         );
 
-        logger.debug("DN: {}",dn);
+        logger.debug("DN: {}",baseDn);
 
-        CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
+        final CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 
         AddResponse addResponse = LdapDatabase.getLdapConnectionTemplate().add(
-                dn,
+                baseDn,
                 new RequestBuilder<AddRequest>() {
                     @Override
                     public void buildRequest(AddRequest request) throws LdapException {
@@ -124,10 +127,10 @@ public class CommandGruppen {
         return;
     }
 
-    private void updateBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Gruppe gruppeLdap, Set<IcaIdentitaet> identitaeten) {
+    private void updateBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Gruppe gruppeLdap, final Set<IcaIdentitaet> identitaeten) {
         LdapConnectionTemplate ldapConnectionTemplate = LdapDatabase.getLdapConnectionTemplate();
 
-        CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
+        final CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 
         ModifyResponse modifyResponse = ldapConnectionTemplate.modify(
                 ldapConnectionTemplate.newDn(gruppeLdap.getDn().toString()),

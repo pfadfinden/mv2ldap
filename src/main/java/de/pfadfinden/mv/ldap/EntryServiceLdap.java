@@ -5,6 +5,7 @@ import de.pfadfinden.mv.ldap.schema.Gruppe;
 import de.pfadfinden.mv.ldap.schema.IcaGruppierung;
 import de.pfadfinden.mv.ldap.schema.IcaIdentitaet;
 import org.apache.directory.api.ldap.model.message.SearchScope;
+import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.ldap.client.template.EntryMapper;
 
 public class EntryServiceLdap {
@@ -22,7 +23,7 @@ public class EntryServiceLdap {
     }
 
     public static Object findIcaById(EntryMapper mapper, String record, int identitaetId){
-        String baseDn = "dc=example,dc=com";
+        Dn baseDn = LdapDatabase.getBaseDn();
         String searchString = String.format("(&(objectClass=%s)(icaId=%d))",record,identitaetId);
         return LdapDatabase.getLdapConnectionTemplate().searchFirst(baseDn,searchString, SearchScope.SUBTREE, mapper);
     }

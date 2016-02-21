@@ -16,6 +16,7 @@ import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 import org.apache.directory.api.ldap.model.message.*;
 import org.apache.directory.api.ldap.model.name.Dn;
+import org.apache.directory.api.ldap.model.name.Rdn;
 import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.template.RequestBuilder;
 import org.slf4j.Logger;
@@ -81,7 +82,7 @@ public class CommandGruppierungen {
      * @return void
      * @author Philipp Steinmetzger
      */
-    private void updateGruppierung(IcaGruppierung gruppierungIca, de.pfadfinden.mv.ldap.schema.IcaGruppierung gruppierungLdap) throws LdapException {
+    private void updateGruppierung(final IcaGruppierung gruppierungIca, final de.pfadfinden.mv.ldap.schema.IcaGruppierung gruppierungLdap) throws LdapException {
         //    Keine Modifikation der OU (Bestandteil DN) durchfuehren
         ModifyResponse modResponse = LdapDatabase.getLdapConnectionTemplate().modify(
                 LdapDatabase.getLdapConnectionTemplate().newDn(gruppierungLdap.getDn().toString()),
@@ -108,7 +109,7 @@ public class CommandGruppierungen {
     }
 
 
-    private void addGruppierung(IcaGruppierung gruppierung) throws LdapInvalidDnException {
+    private void addGruppierung(final IcaGruppierung gruppierung) throws LdapInvalidDnException {
 
         Dn dn;
         de.pfadfinden.mv.ldap.schema.IcaGruppierung parentGruppierung = findParentGruppierung(gruppierung);
@@ -122,11 +123,13 @@ public class CommandGruppierungen {
         } else {
             dn = new Dn(
                     "ou", gruppierung.getName(),
-                    "dc=example,dc=com"
+                    LdapDatabase.getBaseDn().getName()
             );
         }
 
-        LdapDatabase.getLdapConnectionTemplate().add(
+        logger.debug(dn.toString());
+
+        AddResponse addResponse = LdapDatabase.getLdapConnectionTemplate().add(
                 dn,
                 new RequestBuilder<AddRequest>() {
                     @Override
@@ -145,6 +148,11 @@ public class CommandGruppierungen {
                     }
                 }
         );
+
+        if (addResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
+            logger.error(addResponse.getLdapResult().getDiagnosticMessage());
+        }
+
 
     }
 

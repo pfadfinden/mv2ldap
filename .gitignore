@@ -24,11 +24,6 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 
-## IntelliJ
-/.idea/
-
-/out/
-
 ## File-based project format:
 *.iws
 
@@ -36,6 +31,7 @@ buildNumber.properties
 
 # IntelliJ
 /out/
+/.idea/
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/

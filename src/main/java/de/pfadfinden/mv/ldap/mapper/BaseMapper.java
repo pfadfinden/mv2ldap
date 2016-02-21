@@ -2,6 +2,7 @@ package de.pfadfinden.mv.ldap.mapper;
 
 import org.apache.directory.api.ldap.model.entry.Attribute;
 import org.apache.directory.api.ldap.model.entry.Entry;
+import org.apache.directory.api.ldap.model.entry.Value;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueException;
 
 import java.util.ArrayList;
@@ -22,7 +23,9 @@ public class BaseMapper {
         Attribute attribute = entry.get(attributeName);
         if(attribute != null) {
             List<String> values = new ArrayList<>();
-            attribute.iterator().forEachRemaining(value -> values.add(value.toString()));
+            for(Value<?> value : attribute){
+                values.add(value.toString());
+            }
             return values;
         }
         return null;

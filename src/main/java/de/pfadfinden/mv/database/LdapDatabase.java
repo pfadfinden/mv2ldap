@@ -1,6 +1,9 @@
 package de.pfadfinden.mv.database;
 
 import org.apache.commons.pool.impl.GenericObjectPool;
+import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
+import org.apache.directory.api.ldap.model.name.Dn;
+import org.apache.directory.api.ldap.model.name.Rdn;
 import org.apache.directory.ldap.client.api.DefaultPoolableLdapConnectionFactory;
 import org.apache.directory.ldap.client.api.LdapConnectionConfig;
 import org.apache.directory.ldap.client.api.LdapConnectionPool;
@@ -24,6 +27,18 @@ public class LdapDatabase {
             ldapConnectionTemplate = new LdapConnectionTemplate(getLdapConnectionPool());
         }
         return ldapConnectionTemplate;
+    }
+
+    public static Dn getBaseDn(){
+        Properties prop = new Properties();
+        try {
+            InputStream input = LdapDatabase.class.getResourceAsStream("/databaseLdap.properties");
+            prop.load(input);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return getLdapConnectionTemplate().newDn(prop.getProperty("ldapConnection.baseDn"));
     }
 
     private static LdapConnectionPool getLdapConnectionPool() {

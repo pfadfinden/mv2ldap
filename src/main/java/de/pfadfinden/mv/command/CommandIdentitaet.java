@@ -55,7 +55,7 @@ public class CommandIdentitaet {
         return true;
     }
 
-    private void addIdentitaet(IcaIdentitaet icaIdentitaet){
+    private void addIdentitaet(final IcaIdentitaet icaIdentitaet){
         logger.debug("Identiaet #{} in LDAP nicht vorhanden. Neuanlage erforderlich.",icaIdentitaet.getId());
         String username;
         try {
@@ -65,7 +65,6 @@ public class CommandIdentitaet {
             return;
         }
 
-      //  Entry gruppierung = icaRecordService.findGruppierungById(icaIdentitaet.getGruppierungId());
         IcaGruppierung gruppierung = EntryServiceLdap.findIcaGruppierungById(icaIdentitaet.getGruppierungId());
         if(gruppierung == null){
             logger.error("Identitaet #{} konnte keiner Gruppierung zugeordnet werden (ICA Gruppierung #{})",
@@ -76,20 +75,12 @@ public class CommandIdentitaet {
         Dn dn = null;
         try {
             dn = new Dn(
-                    "cn", username,
+                    "uid", username,
                     gruppierung.getDn().getName()
             );
         } catch (LdapInvalidDnException e) {
             logger.error("Erstellung DN fehlerhaft",e);
         }
-
-
-        //   schema.add("mobile",icaIdentitaet.getTelefon3());
-     //   schema.add("telephoneNumber",icaIdentitaet.getTelefon1());
-     //   if(!icaIdentitaet.getTelefax().trim().isEmpty()) {
-     //       schema.add("facsimileTelephoneNumber", icaIdentitaet.getTelefax());
-     //   }
-    //    schema.add("cn",icaIdentitaet.getVorname()+" "+icaIdentitaet.getNachname());
 
         LdapConnectionTemplate ldapConnectionTemplate = LdapDatabase.getLdapConnectionTemplate();
 
@@ -108,10 +99,7 @@ public class CommandIdentitaet {
                         if(icaIdentitaet.getHash() != null && !icaIdentitaet.getHash().trim().isEmpty()) {
                             entry.add("icaHash", icaIdentitaet.getHash());
                         }
-                        entry.add("givenName",icaIdentitaet.getVorname());
-                        if(icaIdentitaet.getSpitzname() != null && !icaIdentitaet.getSpitzname().trim().isEmpty()){
-                            entry.add("icaSpitzname",icaIdentitaet.getSpitzname());
-                        }
+
                         entry.add("street",icaIdentitaet.getStrasse());
                         entry.add("postalCode",icaIdentitaet.getPlz());
                         entry.add("l",icaIdentitaet.getOrt());
@@ -121,7 +109,20 @@ public class CommandIdentitaet {
                             entry.add("icaLastUpdated",new GeneralizedTime(icaIdentitaet.getLastUpdated()).toString());
                         }
 
+                        String cn = new String();
+                        cn+=icaIdentitaet.getVorname()+" ";
+                        cn+=icaIdentitaet.getNachname();
+                        if(icaIdentitaet.getSpitzname()!=null && icaIdentitaet.getSpitzname() != ""){
+                            cn+=" ("+icaIdentitaet.getSpitzname()+")";
+                        }
+
+                        entry.add("cn",cn.trim());
+                        entry.add("givenName",icaIdentitaet.getVorname());
                         entry.add("sn",icaIdentitaet.getNachname());
+                        if(icaIdentitaet.getSpitzname() != null && !icaIdentitaet.getSpitzname().trim().isEmpty()){
+                            entry.add("icaSpitzname",icaIdentitaet.getSpitzname());
+                        }
+
                     }
                 }
         );
@@ -132,7 +133,7 @@ public class CommandIdentitaet {
         return;
     }
 
-    private void updateIdentitaet(IcaIdentitaet icaIdentitaet, de.pfadfinden.mv.ldap.schema.IcaIdentitaet ldapIdentitaet){
+    private void updateIdentitaet(final IcaIdentitaet icaIdentitaet, de.pfadfinden.mv.ldap.schema.IcaIdentitaet ldapIdentitaet){
         logger.debug("Identitaet #{} in LDAP vorhanden, aber Update erforderlich.",icaIdentitaet.getId());
         ModifyResponse modResponse = LdapDatabase.getLdapConnectionTemplate().modify(
                 LdapDatabase.getLdapConnectionTemplate().newDn(ldapIdentitaet.getDn().toString()),

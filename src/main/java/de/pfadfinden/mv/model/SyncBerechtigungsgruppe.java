@@ -11,6 +11,7 @@ public class SyncBerechtigungsgruppe {
         setTitle(rs.getString("title"));
         setDescription(rs.getString("description"));
         setDeleted(rs.getBoolean("deleted"));
+        setOwnerGruppierung(rs.getInt("ownerGruppierung"));
     }
 
     private int id;
@@ -18,6 +19,7 @@ public class SyncBerechtigungsgruppe {
     private String description;
     private boolean deleted;
     private List<SyncTaetigkeit> taetigkeiten;
+    private int ownerGruppierung;
 
     public boolean isDeleted() {
         return deleted;
@@ -61,6 +63,14 @@ public class SyncBerechtigungsgruppe {
 
     public void addTaetigkeit(SyncTaetigkeit taetigkeit){
         taetigkeiten.add(taetigkeit);
+    }
+
+    public int getOwnerGruppierung() {
+        return ownerGruppierung;
+    }
+
+    public void setOwnerGruppierung(int ownerGruppierung) {
+        this.ownerGruppierung = ownerGruppierung;
     }
 
 }

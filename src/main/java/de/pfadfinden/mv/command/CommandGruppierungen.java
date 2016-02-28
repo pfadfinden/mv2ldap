@@ -16,7 +16,6 @@ import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 import org.apache.directory.api.ldap.model.message.*;
 import org.apache.directory.api.ldap.model.name.Dn;
-import org.apache.directory.api.ldap.model.name.Rdn;
 import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.template.RequestBuilder;
 import org.slf4j.Logger;
@@ -26,12 +25,12 @@ public class CommandGruppierungen {
     final Logger logger = LoggerFactory.getLogger(CommandGruppierungen.class);
 
     public final String icaGruppierungen = "" +
-            "SELECT gruppierung.id,gruppierung.name,nummer,ebene_id,parent_gruppierung_id,status,migrationID,alteID," +
-            "version,lastUpdated,sitzOrt, ebene.name as ebeneName, ebene.tiefe " +
-            "FROM gruppierung " +
-            "LEFT JOIN ebene ON gruppierung.ebene_id = ebene.id " +
+            "SELECT Gruppierung.id,Gruppierung.name,nummer,ebene_id,parent_gruppierung_id,status,migrationID,alteID," +
+            "version,lastUpdated,sitzOrt, Ebene.name as ebeneName, Ebene.tiefe " +
+            "FROM Gruppierung " +
+            "LEFT JOIN Ebene ON Gruppierung.ebene_id = Ebene.id " +
             "WHERE status='AKTIV' " +
-            "ORDER BY ebene_id,gruppierung.id ASC ";
+            "ORDER BY ebene_id,Gruppierung.id ASC ";
 
     public CommandGruppierungen() throws SQLException, LdapException {
         IcaGruppierung gruppierung;
@@ -50,14 +49,19 @@ public class CommandGruppierungen {
     }
 
     private void execGruppierung(IcaGruppierung gruppierung) throws LdapException {
-        logger.debug("# Start Verarbeitung Gruppierung {} ({})",gruppierung.getId(),gruppierung.getName());
+        logger.debug("## Start Verarbeitung Gruppierung {} ({}) ##",gruppierung.getId(),gruppierung.getName());
         de.pfadfinden.mv.ldap.schema.IcaGruppierung ldapGruppierung = EntryServiceLdap.findIcaGruppierungById(gruppierung.getId());
 
         if(ldapGruppierung == null){
+            logger.debug("Gruppierung nicht vorhanden. Neuanlage erforderlich.");
             addGruppierung(gruppierung);
         } else {
+            logger.debug("Gruppierung vorhanden. DN: {}",ldapGruppierung.getDn());
             if(needUpdateGruppierung(gruppierung,ldapGruppierung)){
+                logger.debug("Aenderungen an Gruppierung erforderlich.");
                 updateGruppierung(gruppierung,ldapGruppierung);
+            } else {
+                logger.debug("Keine Aenderungen an Gruppierung erforderlich.");
             }
         }
     }
@@ -71,7 +75,7 @@ public class CommandGruppierungen {
      */
     private boolean needUpdateGruppierung(IcaGruppierung gruppierungIca, de.pfadfinden.mv.ldap.schema.IcaGruppierung gruppierungLdap){
         if(gruppierungLdap.isIcaProtected()) return false;
-        if(gruppierungLdap.getIcaLastUpdated()== null) return true;
+        if(gruppierungLdap.getIcaLastUpdated()== null || gruppierungIca.getLastUpdated()== null) return true;
         if(gruppierungLdap.getIcaLastUpdated().before(gruppierungIca.getLastUpdated())) return true;
         return false;
     }
@@ -104,30 +108,31 @@ public class CommandGruppierungen {
         );
 
         if (modResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
-            logger.error(modResponse.getLdapResult().getDiagnosticMessage());
+            logger.error("LDAP Response in updateGruppierung: {}",modResponse.getLdapResult().getDiagnosticMessage());
         }
     }
 
 
     private void addGruppierung(final IcaGruppierung gruppierung) throws LdapInvalidDnException {
-
+        if(gruppierung.getParentGruppierungId()==0) return;
         Dn dn;
         de.pfadfinden.mv.ldap.schema.IcaGruppierung parentGruppierung = findParentGruppierung(gruppierung);
         if(parentGruppierung != null){
-            logger.debug("Parent Entry: {}",parentGruppierung.getDn());
+            logger.debug("Uebergeordnete Gruppierung: {}",parentGruppierung.getDn());
             dn = new Dn(
                     "ou", gruppierung.getName(),
                     parentGruppierung.getDn().getName()
             );
 
         } else {
+            logger.debug("Keine uebergeordnete Gruppierung gefunden.");
             dn = new Dn(
                     "ou", gruppierung.getName(),
                     LdapDatabase.getBaseDn().getName()
             );
         }
 
-        logger.debug(dn.toString());
+        logger.debug("DN fuer Gruppierung #{} lautet: {}",gruppierung.getId(),dn.toString());
 
         AddResponse addResponse = LdapDatabase.getLdapConnectionTemplate().add(
                 dn,
@@ -150,7 +155,7 @@ public class CommandGruppierungen {
         );
 
         if (addResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
-            logger.error(addResponse.getLdapResult().getDiagnosticMessage());
+            logger.error("LDAP Response in addGruppierung: {}",addResponse.getLdapResult().getDiagnosticMessage());
         }
 
 

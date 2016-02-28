@@ -49,14 +49,14 @@ public class CommandIdentitaet {
      * @author Philipp Steinmetzger
      */
     private boolean needUpdate(de.pfadfinden.mv.model.IcaIdentitaet identitaetIca, de.pfadfinden.mv.ldap.schema.IcaIdentitaet identitaetLdap){
-        logger.debug("Identitaet #{} ICA {} LDAP {}",identitaetIca.getId(),identitaetIca.getLastUpdated(),identitaetLdap.getIcaLastUpdated());
         if(identitaetLdap.isIcaProtected()) return false;
-        if(identitaetLdap.getIcaLastUpdated() == identitaetIca.getLastUpdated()) return false;
-        return true;
+        if(identitaetLdap.getIcaLastUpdated()== null || identitaetIca.getLastUpdated()== null) return true;
+        if(identitaetLdap.getIcaLastUpdated().before(identitaetIca.getLastUpdated())) return true;
+        return false;
     }
 
     private void addIdentitaet(final IcaIdentitaet icaIdentitaet){
-        logger.debug("Identiaet #{} in LDAP nicht vorhanden. Neuanlage erforderlich.",icaIdentitaet.getId());
+        logger.debug("Identitaet #{} in LDAP nicht vorhanden. Neuanlage erforderlich.",icaIdentitaet.getId());
         String username;
         try {
             username = UsernameGenerator.getUsername(icaIdentitaet.getNachname(),icaIdentitaet.getVorname());
@@ -101,6 +101,7 @@ public class CommandIdentitaet {
                         }
 
                         entry.add("street",icaIdentitaet.getStrasse());
+                        entry.add("postalAddress",icaIdentitaet.getStrasse());
                         entry.add("postalCode",icaIdentitaet.getPlz());
                         entry.add("l",icaIdentitaet.getOrt());
                         entry.add("mail",icaIdentitaet.getEmail());
@@ -109,20 +110,18 @@ public class CommandIdentitaet {
                             entry.add("icaLastUpdated",new GeneralizedTime(icaIdentitaet.getLastUpdated()).toString());
                         }
 
-                        String cn = new String();
-                        cn+=icaIdentitaet.getVorname()+" ";
-                        cn+=icaIdentitaet.getNachname();
-                        if(icaIdentitaet.getSpitzname()!=null && icaIdentitaet.getSpitzname() != ""){
-                            cn+=" ("+icaIdentitaet.getSpitzname()+")";
-                        }
-
-                        entry.add("cn",cn.trim());
-                        entry.add("givenName",icaIdentitaet.getVorname());
-                        entry.add("sn",icaIdentitaet.getNachname());
-                        if(icaIdentitaet.getSpitzname() != null && !icaIdentitaet.getSpitzname().trim().isEmpty()){
+                        if(icaIdentitaet.getSpitzname() != null){
                             entry.add("icaSpitzname",icaIdentitaet.getSpitzname());
                         }
 
+                        entry.add("cn",icaIdentitaet.getCommonName());
+                        entry.add("displayName",icaIdentitaet.getDisplayName());
+                        entry.add("givenName",icaIdentitaet.getVorname());
+                        entry.add("sn",icaIdentitaet.getNachname());
+
+                        entry.add("homePhone",icaIdentitaet.getTelefon1());
+                        entry.add("mobile",icaIdentitaet.getTelefon3());
+                        entry.add("facsimileTelephoneNumber",icaIdentitaet.getTelefax());
                     }
                 }
         );
@@ -148,16 +147,22 @@ public class CommandIdentitaet {
                             request.replace("icaHash", icaIdentitaet.getHash());
                         }
                         request.replace("givenName",icaIdentitaet.getVorname());
-                        if(icaIdentitaet.getSpitzname() != null && !icaIdentitaet.getSpitzname().trim().isEmpty()){
+
+                        if(icaIdentitaet.getSpitzname() != null){
                             request.replace("icaSpitzname",icaIdentitaet.getSpitzname());
+                            request.replace("initials",icaIdentitaet.getSpitzname());
                         }
+
                         request.replace("street",icaIdentitaet.getStrasse());
+                        request.replace("postalAddress",icaIdentitaet.getStrasse());
                         request.replace("postalCode",icaIdentitaet.getPlz());
                         request.replace("l",icaIdentitaet.getOrt());
                         request.replace("mail",icaIdentitaet.getEmail());
                         if(icaIdentitaet.getLastUpdated() != null){
                             request.replace("icaLastUpdated",new GeneralizedTime(icaIdentitaet.getLastUpdated()).toString());
                         }
+                        request.replace("displayName",icaIdentitaet.getDisplayName());
+                        request.replace("cn",icaIdentitaet.getCommonName());
                         request.replace("sn",icaIdentitaet.getNachname());
                     }
                 }

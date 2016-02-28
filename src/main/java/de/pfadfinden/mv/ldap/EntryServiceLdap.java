@@ -7,8 +7,11 @@ import de.pfadfinden.mv.ldap.schema.IcaIdentitaet;
 import org.apache.directory.api.ldap.model.message.SearchScope;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.ldap.client.template.EntryMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EntryServiceLdap {
+    static Logger logger = LoggerFactory.getLogger(EntryServiceLdap.class);
 
     public static IcaIdentitaet findIcaIdentitaetById(int identitaetId){
         return (IcaIdentitaet) findIcaById(IcaIdentitaet.getEntryMapper(),"icaIdentitaet",identitaetId);

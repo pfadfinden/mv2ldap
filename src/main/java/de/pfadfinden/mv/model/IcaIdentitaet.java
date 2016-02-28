@@ -26,6 +26,7 @@ public class IcaIdentitaet extends IcaRecord{
         this.telefax = rs.getString("telefaxEnc");
         this.version = rs.getInt("version");
         this.lastUpdated = rs.getDate("lastUpdated");
+        this.countrycode = rs.getString("countrycode");
     }
 
     private String mglType;
@@ -37,6 +38,7 @@ public class IcaIdentitaet extends IcaRecord{
     private String ort;
     private String plz;
     private String strasse;
+    private String countrycode;
     private String nachname;
     private String vorname;
     private String spitzname;
@@ -184,10 +186,54 @@ public class IcaIdentitaet extends IcaRecord{
     }
 
     public String getSpitzname() {
-        return spitzname;
+        if (spitzname.trim().isEmpty()) return null;
+        return spitzname.trim();
     }
 
     public void setSpitzname(String spitzname) {
         this.spitzname = spitzname;
     }
+
+    public String getCountrycode() {
+        return countrycode;
+    }
+
+    public void setCountrycode(String countrycode) {
+        this.countrycode = countrycode;
+    }
+
+    public String getCommonName() {
+        String cn = new String();
+
+        if(this.getVorname() != null){
+            cn+=this.getVorname().trim()+" ";
+        }
+
+        if(this.getNachname() != null){
+            cn+=this.getNachname().trim();
+        }
+
+        if(this.getSpitzname() != null){
+            cn+=" ("+this.getSpitzname()+")";
+        }
+        return cn.trim();
+    }
+
+    public String getDisplayName() {
+        String cn = new String();
+
+        if(this.getNachname() != null){
+            cn+=this.getNachname().trim();
+        }
+
+        if(this.getVorname() != null){
+            cn+=", "+this.getVorname().trim()+" ";
+        }
+
+        if(this.getSpitzname() != null){
+            cn+=" ("+this.getSpitzname()+")";
+        }
+        return cn.trim();
+    }
+
 }

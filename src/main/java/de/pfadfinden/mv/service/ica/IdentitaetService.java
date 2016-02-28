@@ -22,8 +22,8 @@ public class IdentitaetService {
     public static Set<IcaIdentitaet> findIdentitaetByTaetigkeit(SyncTaetigkeit syncTaetigkeit) throws SQLException {
 
         String icaIdentiaeten = "" +
-                "SELECT identitaet.*, identitaet.genericField1 AS spitzname " +
-                "FROM taetigkeitassignment LEFT JOIN identitaet ON taetigkeitassignment.mitglied_id = identitaet.id " +
+                "SELECT Identitaet.*, Identitaet.genericField1 AS spitzname " +
+                "FROM TaetigkeitAssignment LEFT JOIN Identitaet ON TaetigkeitAssignment.mitglied_id = Identitaet.id " +
                 "WHERE taetigkeit_id = ? AND aktivBis IS NULL";
 
         Set<IcaIdentitaet> icaIdentitaeten = new HashSet<IcaIdentitaet>();
@@ -55,8 +55,8 @@ public class IdentitaetService {
 
     public static IcaIdentitaet findIdentitaetById(int icaIdentitaet){
 
-        String findIdentitaetById = "SELECT *, identitaet.genericField1 AS spitzname " +
-                "FROM identitaet " +
+        String findIdentitaetById = "SELECT *, Identitaet.genericField1 AS spitzname " +
+                "FROM Identitaet " +
                 "WHERE id=?";
 
         try (

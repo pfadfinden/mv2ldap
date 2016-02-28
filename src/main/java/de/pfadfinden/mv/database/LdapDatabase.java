@@ -54,6 +54,10 @@ public class LdapDatabase {
         LdapConnectionConfig config = new LdapConnectionConfig();
         config.setLdapHost(prop.getProperty("ldapConnection.host"));
         config.setLdapPort(Integer.valueOf(prop.getProperty("ldapConnection.port")));
+        if(prop.getProperty("ldapConnection.name") != null) {
+            config.setName(prop.getProperty("ldapConnection.name"));
+            config.setCredentials(prop.getProperty("ldapConnection.credentials"));
+        }
 
         GenericObjectPool.Config poolConfig = new GenericObjectPool.Config();
         if(prop.getProperty("ldapPool.testOnBorrow") == "true") {

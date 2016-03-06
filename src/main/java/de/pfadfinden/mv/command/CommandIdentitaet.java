@@ -62,6 +62,8 @@ public class CommandIdentitaet {
 
     private void addIdentitaet(final IcaIdentitaet icaIdentitaet){
         logger.debug("Identitaet #{} in LDAP nicht vorhanden. Neuanlage erforderlich.",icaIdentitaet.getId());
+        if(icaIdentitaet.getEmail() == null) logger.info("Anlage Identitaet #{} erfolgt ohne Email.",icaIdentitaet.getId());
+
         String username;
         try {
             username = UsernameGenerator.getUsername(icaIdentitaet.getNachname(),icaIdentitaet.getVorname());

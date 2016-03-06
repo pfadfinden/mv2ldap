@@ -15,7 +15,7 @@ public class BaseMapper {
         if(attribute != null){
             return attribute.getString();
         }
-        return "";
+        return null;
     }
 
     protected List<String> getLdapList(Entry entry, String attributeName){

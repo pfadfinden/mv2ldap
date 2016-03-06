@@ -11,6 +11,9 @@ public class SyncTaetigkeit {
         setTaetigkeit(rs.getString("taetigkeit"));
         setAbteilung_id(rs.getInt("abteilung_id"));
         setAbteilung(rs.getString("abteilung"));
+        setAbteilung_id(rs.getInt("abteilung_id"));
+        setGruppierung(rs.getString("gruppierung"));
+        setGruppierungId(rs.getInt("gruppierung_id"));
     }
 
     private int id;
@@ -18,6 +21,8 @@ public class SyncTaetigkeit {
     private String taetigkeit;
     private int abteilung_id;
     private String abteilung;
+    private int gruppierungId;
+    private String gruppierung;
 
     public String getAbteilung() {
         return abteilung;
@@ -28,6 +33,10 @@ public class SyncTaetigkeit {
     }
 
     public int getAbteilung_id() {
+        return abteilung_id;
+    }
+
+    public int getAbteilungId() {
         return abteilung_id;
     }
 
@@ -62,5 +71,22 @@ public class SyncTaetigkeit {
     public String getString(){
         return "#"+getId()+" ("+getTaetigkeit()+")";
     }
+
+    public int getGruppierungId() {
+        return gruppierungId;
+    }
+
+    public void setGruppierungId(int gruppierungId) {
+        this.gruppierungId = gruppierungId;
+    }
+
+    public String getGruppierung() {
+        return gruppierung;
+    }
+
+    public void setGruppierung(String gruppierung) {
+        this.gruppierung = gruppierung;
+    }
+
 
 }

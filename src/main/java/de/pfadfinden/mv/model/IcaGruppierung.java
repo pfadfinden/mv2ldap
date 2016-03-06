@@ -18,7 +18,7 @@ public class IcaGruppierung extends IcaRecord {
         this.migrationId = rs.getInt("migrationID");
         this.alteId = rs.getString("alteID");
         this.version = rs.getInt("version");
-        this.lastUpdated = rs.getDate("lastUpdated");
+        this.lastUpdated = rs.getTimestamp("lastUpdated");
         this.sitzOrt = rs.getString("sitzOrt");
         this.ebeneName = rs.getString("ebeneName");
     }

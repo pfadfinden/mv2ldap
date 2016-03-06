@@ -17,6 +17,12 @@ public class EntryServiceLdap {
         return (IcaIdentitaet) findIcaById(IcaIdentitaet.getEntryMapper(),"icaIdentitaet",identitaetId);
     }
 
+    public static IcaIdentitaet findIcaIdentitaetByUid(String uid){
+        Dn baseDn = LdapDatabase.getBaseDn();
+        String searchString = String.format("(&(objectClass=%s)(uid=%s))","icaIdentitaet",uid);
+        return LdapDatabase.getLdapConnectionTemplate().searchFirst(baseDn,searchString, SearchScope.SUBTREE, IcaIdentitaet.getEntryMapper());
+    }
+
     public static IcaGruppierung findIcaGruppierungById(int gruppierungId){
         return (IcaGruppierung) findIcaById(IcaGruppierung.getEntryMapper(),"icaGruppierung",gruppierungId);
     }

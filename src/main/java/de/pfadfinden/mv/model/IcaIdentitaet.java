@@ -20,13 +20,15 @@ public class IcaIdentitaet extends IcaRecord{
         this.nachname = rs.getString("nachnameEnc");
         this.vorname = rs.getString("vornameEnc");
         this.spitzname = rs.getString("spitzname");
-        this.telefon1 = rs.getString("telefon1Enc");
-        this.telefon2 = rs.getString("telefon2Enc");
-        this.telefon3 = rs.getString("telefon3Enc");
-        this.telefax = rs.getString("telefaxEnc");
+        setTelefon1(rs.getString("telefon1Enc"));
+        setTelefon2(rs.getString("telefon2Enc"));
+        setTelefon3(rs.getString("telefon3Enc"));
+        setTelefax(rs.getString("telefaxEnc"));
         this.version = rs.getInt("version");
-        this.lastUpdated = rs.getDate("lastUpdated");
-        this.countrycode = rs.getString("countrycode");
+        this.lastUpdated = rs.getTimestamp("lastUpdated");
+        this.countryCode2 = rs.getString("countryCode2");
+        this.countryCode3 = rs.getString("countryCode3");
+        this.countryName = rs.getString("countryName");
     }
 
     private String mglType;
@@ -38,7 +40,9 @@ public class IcaIdentitaet extends IcaRecord{
     private String ort;
     private String plz;
     private String strasse;
-    private String countrycode;
+    private String countryCode2;
+    private String countryCode3;
+    private String countryName;
     private String nachname;
     private String vorname;
     private String spitzname;
@@ -142,7 +146,7 @@ public class IcaIdentitaet extends IcaRecord{
     }
 
     public void setTelefon1(String telefon1) {
-        this.telefon1 = telefon1;
+        this.telefon1 = telefon1.replaceAll("([^0-9-\\s])"," ").trim();
     }
 
     public String getTelefon2() {
@@ -150,7 +154,7 @@ public class IcaIdentitaet extends IcaRecord{
     }
 
     public void setTelefon2(String telefon2) {
-        this.telefon2 = telefon2;
+        this.telefon2 = telefon2.replaceAll("([^0-9-\\s])"," ").trim();
     }
 
     public String getTelefon3() {
@@ -158,7 +162,7 @@ public class IcaIdentitaet extends IcaRecord{
     }
 
     public void setTelefon3(String telefon3) {
-        this.telefon3 = telefon3;
+        this.telefon3 = telefon3.replaceAll("([^0-9-\\s])"," ").trim();
     }
 
     public String getTelefax() {
@@ -166,7 +170,7 @@ public class IcaIdentitaet extends IcaRecord{
     }
 
     public void setTelefax(String telefax) {
-        this.telefax = telefax;
+        this.telefax = telefax.replaceAll("([^0-9-\\s])"," ").trim();
     }
 
     public int getVersion() {
@@ -194,12 +198,29 @@ public class IcaIdentitaet extends IcaRecord{
         this.spitzname = spitzname;
     }
 
-    public String getCountrycode() {
-        return countrycode;
+
+    public String getCountryCode2() {
+        return countryCode2;
     }
 
-    public void setCountrycode(String countrycode) {
-        this.countrycode = countrycode;
+    public void setCountryCode2(String countryCode2) {
+        this.countryCode2 = countryCode2;
+    }
+
+    public String getCountryCode3() {
+        return countryCode3;
+    }
+
+    public void setCountryCode3(String countryCode3) {
+        this.countryCode3 = countryCode3;
+    }
+
+    public String getCountryName() {
+        return countryName;
+    }
+
+    public void setCountryName(String countryName) {
+        this.countryName = countryName;
     }
 
     public String getCommonName() {
@@ -227,7 +248,7 @@ public class IcaIdentitaet extends IcaRecord{
         }
 
         if(this.getVorname() != null){
-            cn+=", "+this.getVorname().trim()+" ";
+            cn+=", "+this.getVorname().trim();
         }
 
         if(this.getSpitzname() != null){

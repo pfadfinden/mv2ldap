@@ -30,6 +30,11 @@ public class CommandIdentitaet {
     public de.pfadfinden.mv.ldap.schema.IcaIdentitaet identitaet2Ldap(int identitaet){
         IcaIdentitaet icaIdentitaet = IdentitaetService.findIdentitaetById(identitaet);
 
+        if(icaIdentitaet == null){
+            logger.error("Keine IcaIdentitaet Instanz zu #{} aufgebaut: Return null.",identitaet);
+            return null;
+        }
+
         de.pfadfinden.mv.ldap.schema.IcaIdentitaet ldapIdentitaet = EntryServiceLdap.findIcaIdentitaetById(identitaet);
 
         if(ldapIdentitaet == null){
@@ -65,7 +70,7 @@ public class CommandIdentitaet {
             return;
         }
 
-        IcaGruppierung gruppierung = EntryServiceLdap.findIcaGruppierungById(icaIdentitaet.getGruppierungId());
+        final IcaGruppierung gruppierung = EntryServiceLdap.findIcaGruppierungById(icaIdentitaet.getGruppierungId());
         if(gruppierung == null){
             logger.error("Identitaet #{} konnte keiner Gruppierung zugeordnet werden (ICA Gruppierung #{})",
                     icaIdentitaet.getId(),icaIdentitaet.getGruppierungId());
@@ -92,6 +97,8 @@ public class CommandIdentitaet {
                         Entry entry = request.getEntry();
                         entry.add("objectClass","inetOrgPerson","organizationalPerson","person",
                                 "top","icaIdentitaet","icaRecord");
+
+                        // ICA Parameter
                         entry.add("icaId",String.valueOf(icaIdentitaet.getId()));
                         entry.add("icaStatus",icaIdentitaet.getStatus());
                         entry.add("icaVersion",String.valueOf(icaIdentitaet.getVersion()));
@@ -100,28 +107,36 @@ public class CommandIdentitaet {
                             entry.add("icaHash", icaIdentitaet.getHash());
                         }
 
-                        entry.add("street",icaIdentitaet.getStrasse());
-                        entry.add("postalAddress",icaIdentitaet.getStrasse());
-                        entry.add("postalCode",icaIdentitaet.getPlz());
-                        entry.add("l",icaIdentitaet.getOrt());
-                        entry.add("mail",icaIdentitaet.getEmail());
-
                         if(icaIdentitaet.getLastUpdated() != null){
                             entry.add("icaLastUpdated",new GeneralizedTime(icaIdentitaet.getLastUpdated()).toString());
                         }
 
-                        if(icaIdentitaet.getSpitzname() != null){
-                            entry.add("icaSpitzname",icaIdentitaet.getSpitzname());
-                        }
-
+                        // Namen
                         entry.add("cn",icaIdentitaet.getCommonName());
                         entry.add("displayName",icaIdentitaet.getDisplayName());
                         entry.add("givenName",icaIdentitaet.getVorname());
                         entry.add("sn",icaIdentitaet.getNachname());
+                        if(icaIdentitaet.getSpitzname() != null) entry.add("icaSpitzname",icaIdentitaet.getSpitzname());
 
-                        entry.add("homePhone",icaIdentitaet.getTelefon1());
-                        entry.add("mobile",icaIdentitaet.getTelefon3());
-                        entry.add("facsimileTelephoneNumber",icaIdentitaet.getTelefax());
+                        // Adresse
+                        entry.add("postalAddress",icaIdentitaet.getStrasse());
+                        entry.add("postalCode",icaIdentitaet.getPlz());
+                        entry.add("l",icaIdentitaet.getOrt());
+                        entry.add("c",icaIdentitaet.getCountryCode2());
+                        entry.add("co",icaIdentitaet.getCountryName());
+
+                        entry.add("mail",icaIdentitaet.getEmail());
+
+                        // Telefon
+                        if(!icaIdentitaet.getTelefon1().isEmpty()) entry.add("telephoneNumber",icaIdentitaet.getTelefon1());
+                        if(!icaIdentitaet.getTelefon1().isEmpty()) entry.add("homePhone",icaIdentitaet.getTelefon1());
+                        if(!icaIdentitaet.getTelefon2().isEmpty()) entry.add("otherHomePhone",icaIdentitaet.getTelefon2());
+                        if(!icaIdentitaet.getTelefon3().isEmpty()) entry.add("mobile",icaIdentitaet.getTelefon3());
+                        if(!icaIdentitaet.getTelefax().isEmpty()) entry.add("facsimileTelephoneNumber",icaIdentitaet.getTelefax());
+
+                        // Sonstiges
+                        entry.add("ou",gruppierung.getIcaEbene()+" "+gruppierung.getOu());
+
                     }
                 }
         );
@@ -138,32 +153,67 @@ public class CommandIdentitaet {
                 LdapDatabase.getLdapConnectionTemplate().newDn(ldapIdentitaet.getDn().toString()),
                 new RequestBuilder<ModifyRequest>() {
                     @Override
-                    public void buildRequest(ModifyRequest request) throws LdapException
-                    {
-                        request.replace("icaStatus",icaIdentitaet.getStatus());
-                        request.replace("icaVersion",String.valueOf(icaIdentitaet.getVersion()));
-                        request.replace("icaMitgliedsnummer",String.valueOf(icaIdentitaet.getMitgliedsNummer()));
-                        if(icaIdentitaet.getHash() != null && !icaIdentitaet.getHash().trim().isEmpty()) {
+                    public void buildRequest(ModifyRequest request) throws LdapException {
+                        request.replace("icaStatus", icaIdentitaet.getStatus());
+                        request.replace("icaVersion", String.valueOf(icaIdentitaet.getVersion()));
+                        request.replace("icaMitgliedsnummer", String.valueOf(icaIdentitaet.getMitgliedsNummer()));
+                        if (icaIdentitaet.getHash() != null && !icaIdentitaet.getHash().trim().isEmpty()) {
                             request.replace("icaHash", icaIdentitaet.getHash());
                         }
-                        request.replace("givenName",icaIdentitaet.getVorname());
 
-                        if(icaIdentitaet.getSpitzname() != null){
-                            request.replace("icaSpitzname",icaIdentitaet.getSpitzname());
-                            request.replace("initials",icaIdentitaet.getSpitzname());
+                        if (icaIdentitaet.getLastUpdated() != null) {
+                            request.replace("icaLastUpdated", new GeneralizedTime(icaIdentitaet.getLastUpdated()).toString());
                         }
 
-                        request.replace("street",icaIdentitaet.getStrasse());
-                        request.replace("postalAddress",icaIdentitaet.getStrasse());
-                        request.replace("postalCode",icaIdentitaet.getPlz());
-                        request.replace("l",icaIdentitaet.getOrt());
-                        request.replace("mail",icaIdentitaet.getEmail());
-                        if(icaIdentitaet.getLastUpdated() != null){
-                            request.replace("icaLastUpdated",new GeneralizedTime(icaIdentitaet.getLastUpdated()).toString());
+                        // Namen
+                        request.replace("cn", icaIdentitaet.getCommonName());
+                        request.replace("displayName", icaIdentitaet.getDisplayName());
+                        request.replace("givenName", icaIdentitaet.getVorname());
+                        request.replace("sn", icaIdentitaet.getNachname());
+                        if (icaIdentitaet.getSpitzname() != null)
+                            request.replace("icaSpitzname", icaIdentitaet.getSpitzname());
+
+                        request.replace("mail", icaIdentitaet.getEmail());
+
+                        // Adresse
+                        request.replace("postalAddress", icaIdentitaet.getStrasse());
+                        request.replace("postalCode", icaIdentitaet.getPlz());
+                        request.replace("l", icaIdentitaet.getOrt());
+                        request.replace("c", icaIdentitaet.getCountryCode2());
+                        request.replace("co", icaIdentitaet.getCountryName());
+/*
+                        // Telefon
+                        if (icaIdentitaet.getTelefon1().isEmpty()){
+                            request.remove("telephoneNumber");
+                            request.remove("homePhone");
+                        } else {
+                            request.replace("telephoneNumber", icaIdentitaet.getTelefon1());
+                            request.replace("homePhone",icaIdentitaet.getTelefon1());
                         }
-                        request.replace("displayName",icaIdentitaet.getDisplayName());
-                        request.replace("cn",icaIdentitaet.getCommonName());
-                        request.replace("sn",icaIdentitaet.getNachname());
+*/
+
+/*
+                        if (icaIdentitaet.getTelefon2().isEmpty()) {
+                            request.remove("otherHomePhone");
+                        } else {
+                            request.replace("otherHomePhone", icaIdentitaet.getTelefon2());
+                        }
+
+                        if (icaIdentitaet.getTelefon3().isEmpty()) {
+                            request.remove("mobile");
+                        } else {
+                            request.replace("mobile", icaIdentitaet.getTelefon3());
+                        }
+
+                        if (icaIdentitaet.getTelefax().isEmpty()) {
+                            request.remove("facsimileTelephoneNumber");
+                        } else {
+                            request.replace("facsimileTelephoneNumber",icaIdentitaet.getTelefax());
+                        }
+*/
+                        // Sonstiges
+                        // request.replace("ou",gruppierung.getIcaEbene()+" "+gruppierung.getOu());
+
                     }
                 }
         );

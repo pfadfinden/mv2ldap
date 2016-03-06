@@ -59,6 +59,7 @@ public class CommandGruppen {
 
                 berechtigungsgruppe.setTaetigkeiten(getTaetigkeitenZuBerechtigungsgruppe(berechtigungsgruppe));
                 Set<IcaIdentitaet> identitaetenZurBerechtigungsgruppe = IdentitaetService.findIdentitaetByBerechtigungsgruppe(berechtigungsgruppe);
+                if (identitaetenZurBerechtigungsgruppe == null) continue;
                 try {
                     execBerechtigungsgruppe(berechtigungsgruppe, identitaetenZurBerechtigungsgruppe);
                 } catch (Exception e) {

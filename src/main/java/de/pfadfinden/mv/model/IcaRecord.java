@@ -14,14 +14,21 @@ public abstract class IcaRecord {
 
     @Override
     public boolean equals(Object compareObj){
-        if(compareObj.getClass().isInstance(IcaRecord.class)){
+        if(compareObj instanceof IcaRecord){
             IcaRecord compareIca = (IcaRecord) compareObj;
             if ((this.getClass().getName() == compareObj.getClass().getName()) &&
                     this.getId() == compareIca.getId()){
                 return true;
             }
         }
-
         return false;
     }
+
+    @Override
+    public int hashCode() {
+        int hashCode = 17;
+        hashCode += 0 == getId() ? 0 : getId() * 31;
+        return hashCode;
+    }
+
 }

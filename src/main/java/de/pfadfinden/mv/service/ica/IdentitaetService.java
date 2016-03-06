@@ -4,6 +4,8 @@ import de.pfadfinden.mv.database.IcaDatabase;
 import de.pfadfinden.mv.model.IcaIdentitaet;
 import de.pfadfinden.mv.model.SyncBerechtigungsgruppe;
 import de.pfadfinden.mv.model.SyncTaetigkeit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,6 +15,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class IdentitaetService {
+    static Logger logger = LoggerFactory.getLogger(IdentitaetService.class);
 
     /**
      * Suche in ICA alle Identitaeten, die der SyncTätigkeit entsprechen.
@@ -22,9 +25,17 @@ public class IdentitaetService {
     public static Set<IcaIdentitaet> findIdentitaetByTaetigkeit(SyncTaetigkeit syncTaetigkeit) throws SQLException {
 
         String icaIdentiaeten = "" +
-                "SELECT Identitaet.*, Identitaet.genericField1 AS spitzname " +
+                "SELECT Identitaet.*, Identitaet.genericField1 AS spitzname, " +
+                "Land.countryCode2, Land.countryCode3, Land.name AS countryName " +
                 "FROM TaetigkeitAssignment LEFT JOIN Identitaet ON TaetigkeitAssignment.mitglied_id = Identitaet.id " +
-                "WHERE taetigkeit_id = ? AND aktivBis IS NULL";
+                "LEFT JOIN Land ON Identitaet.land_id = Land.id " +
+                "WHERE taetigkeit_id = ? AND (aktivBis is null OR aktivBis > now())";
+
+        if(syncTaetigkeit.getAbteilungId() != 0) icaIdentiaeten += " AND TaetigkeitAssignment.Untergliederung_id = ?";
+        if(syncTaetigkeit.getGruppierungId() != 0) icaIdentiaeten += " AND TaetigkeitAssignment.gruppierung_id = ?";
+
+
+        icaIdentiaeten += " ORDER BY Identitaet.nachnameEnc";
 
         Set<IcaIdentitaet> icaIdentitaeten = new HashSet<IcaIdentitaet>();
         try (
@@ -32,6 +43,15 @@ public class IdentitaetService {
                 PreparedStatement identitaetenByTaetigkeitStatement = connection.prepareStatement(icaIdentiaeten);
         ) {
             identitaetenByTaetigkeitStatement.setInt(1,syncTaetigkeit.getTaetigkeit_id());
+            if(syncTaetigkeit.getAbteilungId() != 0) identitaetenByTaetigkeitStatement.setInt(2,syncTaetigkeit.getAbteilungId());
+            if(syncTaetigkeit.getGruppierungId() != 0){
+                if(syncTaetigkeit.getAbteilungId() != 0) {
+                    identitaetenByTaetigkeitStatement.setInt(3,syncTaetigkeit.getGruppierungId());
+                } else {
+                    identitaetenByTaetigkeitStatement.setInt(2,syncTaetigkeit.getGruppierungId());
+                }
+            }
+
             try (ResultSet results = identitaetenByTaetigkeitStatement.executeQuery()) {
                 while (results.next()) {
                     icaIdentitaeten.add(new IcaIdentitaet(results));
@@ -46,18 +66,26 @@ public class IdentitaetService {
         Set<IcaIdentitaet> icaIdentitaeten = new HashSet<IcaIdentitaet>();
 
         for(SyncTaetigkeit syncTaetigkeit : berechtigungsgruppe.getTaetigkeiten()){
-            icaIdentitaeten.addAll(findIdentitaetByTaetigkeit(syncTaetigkeit));
+            Set<IcaIdentitaet> identitaeten = findIdentitaetByTaetigkeit(syncTaetigkeit);
+            if(identitaeten == null) {
+                logger.debug("Zu SyncTaetigkeit #{} {} keine Identitaeten.",syncTaetigkeit.getId(),syncTaetigkeit.getTaetigkeit());
+                continue;
+            }
+            icaIdentitaeten.addAll(identitaeten);
         }
-
         if(icaIdentitaeten.size()==0) return null;
+
         return icaIdentitaeten;
     }
 
     public static IcaIdentitaet findIdentitaetById(int icaIdentitaet){
 
-        String findIdentitaetById = "SELECT *, Identitaet.genericField1 AS spitzname " +
+        String findIdentitaetById = "" +
+                "SELECT *, Identitaet.genericField1 AS spitzname, " +
+                "Land.countryCode2, Land.countryCode3, Land.name AS countryName " +
                 "FROM Identitaet " +
-                "WHERE id=?";
+                "LEFT JOIN Land ON Identitaet.land_id = Land.id " +
+                "WHERE Identitaet.id=?";
 
         try (
             Connection connection = IcaDatabase.getConnection();
@@ -69,7 +97,9 @@ public class IdentitaetService {
                     return new IcaIdentitaet(results);
                 }
             }
-        } catch (SQLException e) {}
+        } catch (SQLException e) {
+            logger.error("Fehler bei findIdentitaetById.",e);
+        }
         return null;
     }
 }

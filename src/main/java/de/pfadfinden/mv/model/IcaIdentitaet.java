@@ -190,7 +190,7 @@ public class IcaIdentitaet extends IcaRecord{
     }
 
     public String getSpitzname() {
-        if (spitzname.trim().isEmpty()) return null;
+        if (spitzname == null || spitzname.trim().isEmpty()) return null;
         return spitzname.trim();
     }
 

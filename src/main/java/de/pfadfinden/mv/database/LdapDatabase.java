@@ -1,14 +1,14 @@
 package de.pfadfinden.mv.database;
 
 import org.apache.commons.pool.impl.GenericObjectPool;
-import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 import org.apache.directory.api.ldap.model.name.Dn;
-import org.apache.directory.api.ldap.model.name.Rdn;
 import org.apache.directory.ldap.client.api.DefaultPoolableLdapConnectionFactory;
 import org.apache.directory.ldap.client.api.LdapConnectionConfig;
 import org.apache.directory.ldap.client.api.LdapConnectionPool;
 import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -31,9 +31,11 @@ public class LdapDatabase {
 
     public static Dn getBaseDn(){
         Properties prop = new Properties();
+
         try {
-            InputStream input = LdapDatabase.class.getResourceAsStream("/databaseLdap.properties");
-            prop.load(input);
+            FileReader fr = new FileReader("./config/databaseLdap.properties");
+            prop.load(fr);
+            return getLdapConnectionTemplate().newDn(prop.getProperty("ldapConnection.baseDn"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -44,9 +46,10 @@ public class LdapDatabase {
     private static LdapConnectionPool getLdapConnectionPool() {
 
         Properties prop = new Properties();
+
         try {
-            InputStream input = LdapDatabase.class.getResourceAsStream("/databaseLdap.properties");
-            prop.load(input);
+            FileReader fr = new FileReader("./config/databaseLdap.properties");
+            prop.load(fr);
         } catch (IOException e) {
             e.printStackTrace();
         }

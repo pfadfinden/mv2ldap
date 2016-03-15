@@ -20,9 +20,6 @@ import org.slf4j.LoggerFactory;
 public class CommandIdentitaet {
     final Logger logger = LoggerFactory.getLogger(CommandIdentitaet.class);
 
-    public CommandIdentitaet(){
-    }
-
     /**
      * Stellt sicher, dass Identitaet in LDAP vorhanden und aktuell ist.
      * @param identitaet
@@ -127,7 +124,9 @@ public class CommandIdentitaet {
                         entry.add("c",icaIdentitaet.getCountryCode2());
                         entry.add("co",icaIdentitaet.getCountryName());
 
-                        entry.add("mail",icaIdentitaet.getEmail());
+                        if (icaIdentitaet.getEmail() != null) {
+                            entry.add("mail", icaIdentitaet.getEmail());
+                        }
 
                         // Telefon
                         if(!icaIdentitaet.getTelefon1().isEmpty()) entry.add("telephoneNumber",icaIdentitaet.getTelefon1());
@@ -175,7 +174,9 @@ public class CommandIdentitaet {
                         if (icaIdentitaet.getSpitzname() != null)
                             request.replace("icaSpitzname", icaIdentitaet.getSpitzname());
 
-                        request.replace("mail", icaIdentitaet.getEmail());
+                        if (icaIdentitaet.getEmail() != null){
+                            request.replace("mail", icaIdentitaet.getEmail());
+                        }
 
                         // Adresse
                         request.replace("postalAddress", icaIdentitaet.getStrasse());

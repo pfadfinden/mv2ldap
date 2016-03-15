@@ -29,7 +29,7 @@ public class IdentitaetService {
                 "Land.countryCode2, Land.countryCode3, Land.name AS countryName " +
                 "FROM TaetigkeitAssignment LEFT JOIN Identitaet ON TaetigkeitAssignment.mitglied_id = Identitaet.id " +
                 "LEFT JOIN Land ON Identitaet.land_id = Land.id " +
-                "WHERE taetigkeit_id = ? AND (aktivBis is null OR aktivBis > now())";
+                "WHERE taetigkeit_id = ? AND aktivVon <= now() AND (aktivBis is null OR aktivBis > now())";
 
         if(syncTaetigkeit.getAbteilungId() != 0) icaIdentiaeten += " AND TaetigkeitAssignment.Untergliederung_id = ?";
         if(syncTaetigkeit.getGruppierungId() != 0) icaIdentiaeten += " AND TaetigkeitAssignment.gruppierung_id = ?";

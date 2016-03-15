@@ -11,7 +11,7 @@ public class IcaIdentitaet extends IcaRecord{
         this.mglType = rs.getString("mglType");
         this.status = rs.getString("status");
         this.gruppierungId = rs.getInt("gruppierung_id");
-        this.email = rs.getString("email");
+        this.email = rs.getString("emailEnc");
         this.mitgliedsNummer = rs.getInt("mitgliedsNummer");
         this.hash = rs.getString("hash");
         this.ort = rs.getString("ortEnc");

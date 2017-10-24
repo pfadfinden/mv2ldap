@@ -9,12 +9,9 @@ import de.pfadfinden.mv.model.IcaIdentitaet;
 import de.pfadfinden.mv.model.SyncBerechtigungsgruppe;
 import de.pfadfinden.mv.model.SyncTaetigkeit;
 import de.pfadfinden.mv.service.ica.IdentitaetService;
-
 import org.apache.directory.api.ldap.model.cursor.CursorException;
-
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
-import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 import org.apache.directory.api.ldap.model.message.*;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.util.GeneralizedTime;

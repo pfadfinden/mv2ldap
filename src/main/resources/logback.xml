@@ -20,7 +20,7 @@
         <appender-ref ref="FILE" />
     </root>
 
-    <logger name="de.pfadfinden" level="DEBUG" />
+    <logger name="de.pfadfinden" level="INFO" />
     <logger name="org.apache.directory" level="WARN" />
 
 </configuration>

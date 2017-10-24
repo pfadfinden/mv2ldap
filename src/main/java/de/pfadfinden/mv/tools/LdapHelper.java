@@ -1,22 +1,9 @@
 package de.pfadfinden.mv.tools;
 
-import de.pfadfinden.mv.model.IcaGruppierung;
-import de.pfadfinden.mv.model.IcaRecord;
-import org.apache.directory.api.ldap.model.entry.DefaultModification;
-import org.apache.directory.api.ldap.model.entry.Entry;
-import org.apache.directory.api.ldap.model.entry.ModificationOperation;
-import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueException;
 import org.apache.directory.api.ldap.model.message.ModifyRequest;
-import org.apache.directory.api.util.GeneralizedTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.text.ParseException;
-import java.util.Date;
-
-/**
- * Created by Philipp on 19.01.2016.
- */
 public class LdapHelper {
     final static Logger logger = LoggerFactory.getLogger(LdapHelper.class);
 

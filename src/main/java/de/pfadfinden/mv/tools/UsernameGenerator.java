@@ -18,26 +18,21 @@ public class UsernameGenerator {
     }
 
     public static String prepareUsernameString(String inputString){
-        String outputString = inputString;
 
-        // 1. Kleinschrift
-        outputString = outputString.toLowerCase();
+        // Kleinschrift und Leerzeichen entfernen
+        String outputString = inputString.toLowerCase().trim();
 
-        // 2. Leerzeichen entfernen
-        outputString = outputString.trim();
+        // Ersetze alle Umlaute
+        outputString = outputString.replace("ü", "ue")
+                .replace("ö", "oe")
+                .replace("ä", "ae")
+                .replace("ß", "ss");
 
-        // 3. Ersetze alle Umlaute
-        outputString = outputString
-                .replaceAll("ü", "ue")
-                .replaceAll("ö", "oe")
-                .replaceAll("ä", "ae")
-                .replaceAll("ß", "ss");
-
-        // 4. Entferne Accents vgl. https://drillio.com/en/2011/java-remove-accent-diacritic/
+        // Entferne Accents vgl. https://drillio.com/en/2011/java-remove-accent-diacritic/
         outputString = Normalizer.normalize(outputString, Normalizer.Form.NFD)
                 .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
 
-        // 5. Ersetze Leerzeichen
+        // Ersetze Leerzeichen
         outputString = outputString
                 .replaceAll(" ", "-");
 

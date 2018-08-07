@@ -9,9 +9,6 @@ public class LdapHelper {
 
     /**
      * Pruefe ob Modifikation eines LDAP Attributes erforderlich ist und erstelle DefaultModification
-     *
-     * @return DefaultModification
-     * @author Philipp Steinmetzger
      */
     public static void stringUpdateHelper(ModifyRequest request, Object fieldIca, Object fieldLdap, String field){
 

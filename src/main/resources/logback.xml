@@ -1,7 +1,6 @@
 <configuration debug="false">
     <timestamp key="bySecond" datePattern="yyyyMMdd'T'HHmmss"/>
 
-    <!-- Send debug messages to System.out -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} %highlight[%thread] %-5level %logger{30} - %msg%n</pattern>
@@ -10,8 +9,8 @@
 
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
         <file>ldapsync-${bySecond}.log</file>
-        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <Pattern>%d{HH:mm:ss.SSS} %-5level - %msg%n</Pattern>
+        <encoder>
+            <pattern>%d %-5level [%thread] %logger{0}: %msg%n</pattern>
         </encoder>
     </appender>
 

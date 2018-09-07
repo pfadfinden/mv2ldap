@@ -48,4 +48,5 @@ fabric.properties
 ## Individuell
 *.pseudo
 *.iml
-*.properties
+
+/config/

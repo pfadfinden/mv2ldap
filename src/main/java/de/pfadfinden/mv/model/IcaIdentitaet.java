@@ -1,34 +1,39 @@
 package de.pfadfinden.mv.model;
 
+import org.springframework.jdbc.core.RowMapper;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Date;
 
-public class IcaIdentitaet extends IcaRecord{
+public class IcaIdentitaet extends IcaRecord implements RowMapper<IcaIdentitaet> {
 
-    public IcaIdentitaet(ResultSet rs) throws SQLException {
-        setId(rs.getInt("id"));
-        this.mglType = rs.getString("mglType");
-        this.status = rs.getString("status");
-        this.gruppierungId = rs.getInt("gruppierung_id");
-        this.email = rs.getString("emailEnc");
-        this.mitgliedsNummer = rs.getInt("mitgliedsNummer");
-        this.hash = rs.getString("hash");
-        this.ort = rs.getString("ortEnc");
-        this.plz = rs.getString("plzEnc");
-        this.strasse = rs.getString("strasseEnc");
-        this.nachname = rs.getString("nachnameEnc");
-        this.vorname = rs.getString("vornameEnc");
-        this.spitzname = rs.getString("spitzname");
-        setTelefon1(rs.getString("telefon1Enc"));
-        setTelefon2(rs.getString("telefon2Enc"));
-        setTelefon3(rs.getString("telefon3Enc"));
-        setTelefax(rs.getString("telefaxEnc"));
-        this.version = rs.getInt("version");
-        this.lastUpdated = rs.getTimestamp("lastUpdated");
-        this.countryCode2 = rs.getString("countryCode2");
-        this.countryCode3 = rs.getString("countryCode3");
-        this.countryName = rs.getString("countryName");
+    @Override
+    public IcaIdentitaet mapRow(ResultSet rs, int rowNum) throws SQLException {
+        IcaIdentitaet icaIdentitaet = new IcaIdentitaet();
+        icaIdentitaet.setId(rs.getInt("id"));
+        icaIdentitaet.setMglType(rs.getString("mglType"));
+        icaIdentitaet.setStatus(rs.getString("status"));
+        icaIdentitaet.setGruppierungId(rs.getInt("gruppierung_id"));
+        icaIdentitaet.setEmail(rs.getString("emailEnc"));
+        icaIdentitaet.setMitgliedsNummer(rs.getInt("mitgliedsNummer"));
+        icaIdentitaet.setHash(rs.getString("hash"));
+        icaIdentitaet.setOrt(rs.getString("ortEnc"));
+        icaIdentitaet.setPlz(rs.getString("plzEnc"));
+        icaIdentitaet.setStrasse(rs.getString("strasseEnc"));
+        icaIdentitaet.setNachname(rs.getString("nachnameEnc"));
+        icaIdentitaet.setVorname(rs.getString("vornameEnc"));
+        icaIdentitaet.setSpitzname(rs.getString("spitzname"));
+        icaIdentitaet.setTelefon1(rs.getString("telefon1Enc"));
+        icaIdentitaet.setTelefon2(rs.getString("telefon2Enc"));
+        icaIdentitaet.setTelefon3(rs.getString("telefon3Enc"));
+        icaIdentitaet.setTelefax(rs.getString("telefaxEnc"));
+        icaIdentitaet.setVersion(rs.getInt("version"));
+        icaIdentitaet.setLastUpdated(rs.getTimestamp("lastUpdated"));
+        icaIdentitaet.setCountryCode2(rs.getString("countryCode2"));
+        icaIdentitaet.setCountryCode3(rs.getString("countryCode3"));
+        icaIdentitaet.setCountryName(rs.getString("countryName"));
+        return icaIdentitaet;
     }
 
     private String mglType;

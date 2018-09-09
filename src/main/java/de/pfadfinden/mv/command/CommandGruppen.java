@@ -1,15 +1,13 @@
 package de.pfadfinden.mv.command;
 
 import de.pfadfinden.mv.database.LdapDatabase;
-import de.pfadfinden.mv.database.SyncDatabase;
-import de.pfadfinden.mv.ldap.EntryServiceLdap;
 import de.pfadfinden.mv.ldap.schema.Gruppe;
 import de.pfadfinden.mv.ldap.schema.IcaGruppierung;
 import de.pfadfinden.mv.model.IcaIdentitaet;
 import de.pfadfinden.mv.model.SyncBerechtigungsgruppe;
-import de.pfadfinden.mv.model.SyncTaetigkeit;
-import de.pfadfinden.mv.service.ica.IdentitaetService;
-import org.apache.directory.api.ldap.model.cursor.CursorException;
+import de.pfadfinden.mv.service.IcaService;
+import de.pfadfinden.mv.service.LdapEntryService;
+import de.pfadfinden.mv.service.SyncService;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.message.AddResponse;
@@ -20,56 +18,52 @@ import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
+@Component
 public class CommandGruppen {
     final Logger logger = LoggerFactory.getLogger(CommandGruppen.class);
 
+    private final CommandIdentitaet commandIdentitaet;
+    private final IcaService icaService;
+    private final SyncService syncService;
+    private final LdapEntryService ldapEntryService;
 
-    public final String syncGruppen = "SELECT * FROM berechtigungsgruppe " +
-            "WHERE deleted = 0 " +
-            "ORDER BY id ASC ";
+    public CommandGruppen(CommandIdentitaet commandIdentitaet,
+                          IcaService icaService,
+                          SyncService syncService,
+                          LdapEntryService ldapEntryService) {
+        this.commandIdentitaet = commandIdentitaet;
+        this.icaService = icaService;
+        this.syncService = syncService;
+        this.ldapEntryService = ldapEntryService;
+    }
 
-    public final String syncTaetigkeiten = "SELECT * FROM taetigkeit " +
-            "WHERE berechtigungsgruppe_id = ? " +
-            "ORDER BY id ASC ";
+    public void exec() throws SQLException {
 
-    public CommandGruppen() throws SQLException {
+        List<SyncBerechtigungsgruppe> syncBerechtigungsgruppeList = this.syncService.getSyncGruppen();
 
-        SyncBerechtigungsgruppe berechtigungsgruppe;
-
-        try (
-            Connection connection = SyncDatabase.getConnection();
-            PreparedStatement statement = connection.prepareStatement(syncGruppen);
-            ResultSet resultSet = statement.executeQuery()
-        ) {
-            while (resultSet.next()) {
-                berechtigungsgruppe = new SyncBerechtigungsgruppe(resultSet);
-
-                berechtigungsgruppe.setTaetigkeiten(getTaetigkeitenZuBerechtigungsgruppe(berechtigungsgruppe));
-                Set<IcaIdentitaet> identitaetenZurBerechtigungsgruppe = IdentitaetService.findIdentitaetByBerechtigungsgruppe(berechtigungsgruppe);
-                if (identitaetenZurBerechtigungsgruppe == null) continue;
-                try {
-                    execBerechtigungsgruppe(berechtigungsgruppe, identitaetenZurBerechtigungsgruppe);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        for(SyncBerechtigungsgruppe berechtigungsgruppe : syncBerechtigungsgruppeList) {
+            berechtigungsgruppe.setTaetigkeiten(syncService.getTaetigkeitenZuBerechtigungsgruppe(berechtigungsgruppe));
+            Set<IcaIdentitaet> identitaetenZurBerechtigungsgruppe = icaService.findIdentitaetByBerechtigungsgruppe(berechtigungsgruppe);
+            if (identitaetenZurBerechtigungsgruppe == null) continue;
+            try {
+                execBerechtigungsgruppe(berechtigungsgruppe, identitaetenZurBerechtigungsgruppe);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
 
-    private void execBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Set<IcaIdentitaet> identitaeten) throws CursorException, LdapException, Exception {
+    private void execBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Set<IcaIdentitaet> identitaeten) throws Exception {
         logger.info("## Berechtigungsgruppe #{} '{}' ##",berechtigungsgruppe.getId(),berechtigungsgruppe.getTitle());
 
-        Gruppe gruppe = EntryServiceLdap.findGruppeById(berechtigungsgruppe.getId());
+        Gruppe gruppe = ldapEntryService.findGruppeById(berechtigungsgruppe.getId());
 
         if(gruppe == null){
             logger.info("Berechtigungsgruppe in LDAP nicht vorhanden.");
@@ -80,9 +74,9 @@ public class CommandGruppen {
         }
     }
 
-    private void addBerechtigungsgruppe(final SyncBerechtigungsgruppe berechtigungsgruppe, final Set<IcaIdentitaet> identitaeten) throws CursorException, LdapException {
+    private void addBerechtigungsgruppe(final SyncBerechtigungsgruppe berechtigungsgruppe, final Set<IcaIdentitaet> identitaeten) throws LdapException {
         Dn baseDn;
-        final IcaGruppierung ownerGruppierung = EntryServiceLdap.findIcaGruppierungById(berechtigungsgruppe.getOwnerGruppierung());
+        final IcaGruppierung ownerGruppierung = ldapEntryService.findIcaGruppierungById(berechtigungsgruppe.getOwnerGruppierung());
         if(berechtigungsgruppe.getOwnerGruppierung()!=0 && ownerGruppierung != null){
             baseDn = new Dn(
                     "cn", berechtigungsgruppe.getTitle(),
@@ -96,8 +90,6 @@ public class CommandGruppen {
         }
 
         logger.debug("DN: {}",baseDn);
-
-        final CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
 
         AddResponse addResponse = LdapDatabase.getLdapConnectionTemplate().add(
                 baseDn,
@@ -134,8 +126,6 @@ public class CommandGruppen {
     private void updateBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Gruppe gruppeLdap, final Set<IcaIdentitaet> identitaeten) {
         LdapConnectionTemplate ldapConnectionTemplate = LdapDatabase.getLdapConnectionTemplate();
 
-        final CommandIdentitaet commandIdentitaet = new CommandIdentitaet();
-
         ModifyResponse modifyResponse = ldapConnectionTemplate.modify(
                 ldapConnectionTemplate.newDn(gruppeLdap.getDn().toString()),
                 request -> {
@@ -155,23 +145,5 @@ public class CommandGruppen {
             logger.error(modifyResponse.getLdapResult().getDiagnosticMessage());
         }
         return;
-    }
-
-    private List<SyncTaetigkeit> getTaetigkeitenZuBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe) throws SQLException {
-        List<SyncTaetigkeit> taetigkeiten = new ArrayList<>();
-
-        try (
-                Connection connection = SyncDatabase.getConnection();
-                PreparedStatement statement = connection.prepareStatement(syncTaetigkeiten);
-        ) {
-            statement.setInt(1,berechtigungsgruppe.getId());
-            try(ResultSet resultSet = statement.executeQuery()){
-                while (resultSet.next()) {
-                    taetigkeiten.add(new SyncTaetigkeit(resultSet));
-                }
-            }
-        }
-
-        return taetigkeiten;
     }
 }

@@ -1,25 +1,25 @@
 package de.pfadfinden.mv.command;
 
-import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.ldap.schema.IcaIdentitaet;
-import org.apache.directory.api.ldap.model.message.SearchScope;
-import org.apache.directory.api.ldap.model.name.Dn;
+import de.pfadfinden.mv.service.LdapEntryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Component
 public class CommandOrphanedPersons {
     private final Logger logger = LoggerFactory.getLogger(CommandOrphanedPersons.class);
 
-    public CommandOrphanedPersons() {
+    private final LdapEntryService ldapEntryService;
 
-        Dn baseDn = LdapDatabase.getBaseDn();
-        String searchString = "(&(objectClass=person)(!(memberOf=*)))";
-        List<IcaIdentitaet> identitaetList = LdapDatabase.getLdapConnectionTemplate().search(
-                baseDn,searchString, SearchScope.SUBTREE, IcaIdentitaet.getEntryMapper()
-        );
+    public CommandOrphanedPersons(LdapEntryService ldapEntryService) {
+        this.ldapEntryService = ldapEntryService;
+    }
 
+    public void exec() {
+        List<IcaIdentitaet> identitaetList = ldapEntryService.findOrphanedPersons();
         identitaetList.forEach(icaIdentitaet -> {
             logger.info("Orphaned User: {} {}",icaIdentitaet.getIcaId(),icaIdentitaet.getCn());
         });

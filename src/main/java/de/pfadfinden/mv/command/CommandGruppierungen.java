@@ -1,15 +1,12 @@
 package de.pfadfinden.mv.command;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Date;
+import java.util.List;
 
-import de.pfadfinden.mv.database.IcaDatabase;
 import de.pfadfinden.mv.database.LdapDatabase;
-import de.pfadfinden.mv.ldap.EntryServiceLdap;
 import de.pfadfinden.mv.model.IcaGruppierung;
+import de.pfadfinden.mv.service.IcaService;
+import de.pfadfinden.mv.service.LdapEntryService;
 import de.pfadfinden.mv.tools.LdapHelper;
 import org.apache.directory.api.ldap.model.entry.*;
 import org.apache.directory.api.ldap.model.exception.LdapException;
@@ -20,37 +17,30 @@ import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.template.RequestBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class CommandGruppierungen {
     final Logger logger = LoggerFactory.getLogger(CommandGruppierungen.class);
 
-    public final String icaGruppierungen = "" +
-            "SELECT Gruppierung.id,Gruppierung.name,nummer,ebene_id,parent_gruppierung_id,status,migrationID,alteID," +
-            "version,lastUpdated,sitzOrt, Ebene.name as ebeneName, Ebene.tiefe " +
-            "FROM Gruppierung " +
-            "LEFT JOIN Ebene ON Gruppierung.ebene_id = Ebene.id " +
-            "WHERE status='AKTIV' " +
-            "ORDER BY ebene_id,Gruppierung.id ASC ";
+    private IcaService icaService;
+    private LdapEntryService ldapEntryService;
 
-    public CommandGruppierungen() throws SQLException, LdapException {
-        IcaGruppierung gruppierung;
+    public CommandGruppierungen(IcaService icaService, LdapEntryService ldapEntryService) {
+        this.icaService = icaService;
+        this.ldapEntryService = ldapEntryService;
+    }
 
-        try(
-            Connection connection = IcaDatabase.getConnection();
-            PreparedStatement preparedStatement = connection.prepareStatement(icaGruppierungen);
-        ){
-            try (ResultSet icaGruppierungenResultset = preparedStatement.executeQuery()) {
-                while (icaGruppierungenResultset.next()) {
-                    gruppierung = new IcaGruppierung(icaGruppierungenResultset);
-                    execGruppierung(gruppierung);
-                }
-            }
+    public void exec() throws LdapException {
+        List<IcaGruppierung> icaGruppierungList = this.icaService.getGruppierungen();
+        for(IcaGruppierung icaGruppierung : icaGruppierungList){
+            execGruppierung(icaGruppierung);
         }
     }
 
     private void execGruppierung(IcaGruppierung gruppierung) throws LdapException {
         logger.debug("## Start Verarbeitung Gruppierung {} ({}) ##",gruppierung.getId(),gruppierung.getName());
-        de.pfadfinden.mv.ldap.schema.IcaGruppierung ldapGruppierung = EntryServiceLdap.findIcaGruppierungById(gruppierung.getId());
+        de.pfadfinden.mv.ldap.schema.IcaGruppierung ldapGruppierung = ldapEntryService.findIcaGruppierungById(gruppierung.getId());
 
         if(ldapGruppierung == null){
             logger.debug("Gruppierung nicht vorhanden. Neuanlage erforderlich.");
@@ -157,13 +147,11 @@ public class CommandGruppierungen {
         if (addResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
             logger.error("LDAP Response in addGruppierung: {}",addResponse.getLdapResult().getDiagnosticMessage());
         }
-
-
     }
 
     private de.pfadfinden.mv.ldap.schema.IcaGruppierung findParentGruppierung(IcaGruppierung gruppierung){
         logger.debug("Suche Parent Gruppierung zu {} (ParentID: {})",gruppierung.getName(),gruppierung.getParentGruppierungId());
-        return EntryServiceLdap.findIcaGruppierungById(gruppierung.getParentGruppierungId());
+        return ldapEntryService.findIcaGruppierungById(gruppierung.getParentGruppierungId());
     }
 
 }

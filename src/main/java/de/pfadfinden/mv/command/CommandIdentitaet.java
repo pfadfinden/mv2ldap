@@ -1,10 +1,10 @@
 package de.pfadfinden.mv.command;
 
 import de.pfadfinden.mv.database.LdapDatabase;
-import de.pfadfinden.mv.ldap.EntryServiceLdap;
 import de.pfadfinden.mv.ldap.schema.IcaGruppierung;
 import de.pfadfinden.mv.model.IcaIdentitaet;
-import de.pfadfinden.mv.service.ica.IdentitaetService;
+import de.pfadfinden.mv.service.IcaService;
+import de.pfadfinden.mv.service.LdapEntryService;
 import de.pfadfinden.mv.tools.UsernameGenerator;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
@@ -16,23 +16,33 @@ import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class CommandIdentitaet {
     final Logger logger = LoggerFactory.getLogger(CommandIdentitaet.class);
+
+    private final IcaService icaService;
+    private final LdapEntryService ldapEntryService;
+
+    public CommandIdentitaet(IcaService icaService, LdapEntryService ldapEntryService) {
+        this.icaService = icaService;
+        this.ldapEntryService = ldapEntryService;
+    }
 
     /**
      * Stellt sicher, dass Identitaet in LDAP vorhanden und aktuell ist.
      * @param identitaet
      */
     public de.pfadfinden.mv.ldap.schema.IcaIdentitaet identitaet2Ldap(int identitaet){
-        IcaIdentitaet icaIdentitaet = IdentitaetService.findIdentitaetById(identitaet);
+        IcaIdentitaet icaIdentitaet = icaService.findIdentitaetById(identitaet);
 
         if(icaIdentitaet == null){
             logger.error("Keine IcaIdentitaet Instanz zu #{} aufgebaut: Return null.",identitaet);
             return null;
         }
 
-        de.pfadfinden.mv.ldap.schema.IcaIdentitaet ldapIdentitaet = EntryServiceLdap.findIcaIdentitaetById(identitaet);
+        de.pfadfinden.mv.ldap.schema.IcaIdentitaet ldapIdentitaet = ldapEntryService.findIcaIdentitaetById(identitaet);
 
         if(ldapIdentitaet == null){
             addIdentitaet(icaIdentitaet);
@@ -40,7 +50,7 @@ public class CommandIdentitaet {
             if(needUpdate(icaIdentitaet,ldapIdentitaet))
                 updateIdentitaet(icaIdentitaet,ldapIdentitaet);
         }
-        return EntryServiceLdap.findIcaIdentitaetById(identitaet);
+        return ldapEntryService.findIcaIdentitaetById(identitaet);
     }
 
     /**
@@ -69,7 +79,7 @@ public class CommandIdentitaet {
             return;
         }
 
-        final IcaGruppierung gruppierung = EntryServiceLdap.findIcaGruppierungById(icaIdentitaet.getGruppierungId());
+        final IcaGruppierung gruppierung = ldapEntryService.findIcaGruppierungById(icaIdentitaet.getGruppierungId());
         if(gruppierung == null){
             logger.error("Identitaet #{} konnte keiner Gruppierung zugeordnet werden (ICA Gruppierung #{})",
                     icaIdentitaet.getId(),icaIdentitaet.getGruppierungId());
@@ -163,40 +173,6 @@ public class CommandIdentitaet {
                     if (icaIdentitaet.getEmail() != null){
                         request.replace("mail", icaIdentitaet.getEmail());
                     }
-
-                    /*
-                    // Telefon
-                    if (icaIdentitaet.getTelefon1().isEmpty()){
-                        request.remove("telephoneNumber");
-                        request.remove("homePhone");
-                    } else {
-                        request.replace("telephoneNumber", icaIdentitaet.getTelefon1());
-                        request.replace("homePhone",icaIdentitaet.getTelefon1());
-                    }
-*/
-
-/*
-                    if (icaIdentitaet.getTelefon2().isEmpty()) {
-                        request.remove("otherHomePhone");
-                    } else {
-                        request.replace("otherHomePhone", icaIdentitaet.getTelefon2());
-                    }
-
-                    if (icaIdentitaet.getTelefon3().isEmpty()) {
-                        request.remove("mobile");
-                    } else {
-                        request.replace("mobile", icaIdentitaet.getTelefon3());
-                    }
-
-                    if (icaIdentitaet.getTelefax().isEmpty()) {
-                        request.remove("facsimileTelephoneNumber");
-                    } else {
-                        request.replace("facsimileTelephoneNumber",icaIdentitaet.getTelefax());
-                    }
-*/
-                    // Sonstiges
-                    // request.replace("ou",gruppierung.getIcaEbene()+" "+gruppierung.getOu());
-
                 }
         );
 

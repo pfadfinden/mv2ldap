@@ -1,17 +1,22 @@
 package de.pfadfinden.mv.model;
 
+import org.springframework.jdbc.core.RowMapper;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-public class SyncBerechtigungsgruppe {
+public class SyncBerechtigungsgruppe implements RowMapper<SyncBerechtigungsgruppe> {
 
-    public SyncBerechtigungsgruppe(ResultSet rs) throws SQLException {
-        setId(rs.getInt("id"));
-        setTitle(rs.getString("title"));
-        setDescription(rs.getString("description"));
-        setDeleted(rs.getBoolean("deleted"));
-        setOwnerGruppierung(rs.getInt("ownerGruppierung"));
+    @Override
+    public SyncBerechtigungsgruppe mapRow(ResultSet rs, int rowNum) throws SQLException {
+        SyncBerechtigungsgruppe syncBerechtigungsgruppe = new SyncBerechtigungsgruppe();
+        syncBerechtigungsgruppe.setId(rs.getInt("id"));
+        syncBerechtigungsgruppe.setTitle(rs.getString("title"));
+        syncBerechtigungsgruppe.setDescription(rs.getString("description"));
+        syncBerechtigungsgruppe.setDeleted(rs.getBoolean("deleted"));
+        syncBerechtigungsgruppe.setOwnerGruppierung(rs.getInt("ownerGruppierung"));
+        return syncBerechtigungsgruppe;
     }
 
     private int id;

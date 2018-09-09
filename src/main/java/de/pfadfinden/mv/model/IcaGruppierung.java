@@ -1,26 +1,31 @@
 package de.pfadfinden.mv.model;
 
+import org.springframework.jdbc.core.RowMapper;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Date;
 
-public class IcaGruppierung extends IcaRecord {
+public class IcaGruppierung extends IcaRecord implements RowMapper<IcaGruppierung> {
 
     public IcaGruppierung(){}
 
-    public IcaGruppierung(ResultSet rs) throws SQLException {
-        setId(rs.getInt("id"));
-        this.name = rs.getString("name");
-        this.ebeneId = rs.getInt("ebene_id");
-        this.parentGruppierungId = rs.getInt("parent_gruppierung_id");
-        this.status = rs.getString("status");
-        this.nummer = rs.getString("nummer");
-        this.migrationId = rs.getInt("migrationID");
-        this.alteId = rs.getString("alteID");
-        this.version = rs.getInt("version");
-        this.lastUpdated = rs.getTimestamp("lastUpdated");
-        this.sitzOrt = rs.getString("sitzOrt");
-        this.ebeneName = rs.getString("ebeneName");
+    @Override
+    public IcaGruppierung mapRow(ResultSet rs, int rowNum) throws SQLException {
+        IcaGruppierung icaGruppierung = new IcaGruppierung();
+        icaGruppierung.setId(rs.getInt("id"));
+        icaGruppierung.setName(rs.getString("name"));
+        icaGruppierung.setEbeneId(rs.getInt("ebene_id"));
+        icaGruppierung.setParentGruppierungId(rs.getInt("parent_gruppierung_id"));
+        icaGruppierung.setStatus(rs.getString("status"));
+        icaGruppierung.setNummer(rs.getString("nummer"));
+        icaGruppierung.setMigrationId(rs.getInt("migrationID"));
+        icaGruppierung.setAlteId(rs.getString("alteID"));
+        icaGruppierung.setVersion(rs.getInt("version"));
+        icaGruppierung.setLastUpdated(rs.getTimestamp("lastUpdated"));
+        icaGruppierung.setSitzOrt(rs.getString("sitzOrt"));
+        icaGruppierung.setEbeneName(rs.getString("ebeneName"));
+        return icaGruppierung;
     }
 
     private String name;

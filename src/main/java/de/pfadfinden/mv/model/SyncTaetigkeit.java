@@ -1,19 +1,24 @@
 package de.pfadfinden.mv.model;
 
+import org.springframework.jdbc.core.RowMapper;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class SyncTaetigkeit {
+public class SyncTaetigkeit implements RowMapper<SyncTaetigkeit> {
 
-    public SyncTaetigkeit(ResultSet rs) throws SQLException {
-        setId(rs.getInt("id"));
-        setTaetigkeit_id(rs.getInt("taetigkeit_id"));
-        setTaetigkeit(rs.getString("taetigkeit"));
-        setAbteilung_id(rs.getInt("abteilung_id"));
-        setAbteilung(rs.getString("abteilung"));
-        setAbteilung_id(rs.getInt("abteilung_id"));
-        setGruppierung(rs.getString("gruppierung"));
-        setGruppierungId(rs.getInt("gruppierung_id"));
+    @Override
+    public SyncTaetigkeit mapRow(ResultSet rs, int rowNum) throws SQLException {
+        SyncTaetigkeit syncTaetigkeit = new SyncTaetigkeit();
+        syncTaetigkeit.setId(rs.getInt("id"));
+        syncTaetigkeit.setTaetigkeit_id(rs.getInt("taetigkeit_id"));
+        syncTaetigkeit.setTaetigkeit(rs.getString("taetigkeit"));
+        syncTaetigkeit.setAbteilung_id(rs.getInt("abteilung_id"));
+        syncTaetigkeit.setAbteilung(rs.getString("abteilung"));
+        syncTaetigkeit.setAbteilung_id(rs.getInt("abteilung_id"));
+        syncTaetigkeit.setGruppierung(rs.getString("gruppierung"));
+        syncTaetigkeit.setGruppierungId(rs.getInt("gruppierung_id"));
+        return syncTaetigkeit;
     }
 
     private int id;

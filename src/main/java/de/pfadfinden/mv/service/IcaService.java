@@ -11,10 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class IcaService {
@@ -30,32 +27,40 @@ public class IcaService {
     /**
      * Suche in ICA alle Identitaeten, die der SyncTätigkeit entsprechen.
      *
-     * @return Liste mit Identitäten oder NULL
+     * @return Liste mit Identitäten
      */
     public List<IcaIdentitaet> findIdentitaetByTaetigkeit(SyncTaetigkeit syncTaetigkeit) {
+
+        if(syncTaetigkeit.getTaetigkeit_id() == 0 && syncTaetigkeit.getGruppierungId() == 0){
+            logger.warn("SyncTaetigkeit #{} ueberlesen, da ohne Gruppierung/Taetigkeit.", syncTaetigkeit.getId());
+            return Collections.emptyList();
+        }
 
         List<Object> args = new ArrayList<>();
 
         String icaIdentiaeten = "" +
                 "SELECT Identitaet.*, Identitaet.genericField1 AS spitzname, " +
                 "Land.countryCode2, Land.countryCode3, Land.name AS countryName " +
-                "FROM TaetigkeitAssignment LEFT JOIN Identitaet ON TaetigkeitAssignment.mitglied_id = Identitaet.id " +
-                "LEFT JOIN Land ON Identitaet.land_id = Land.id " +
-                "WHERE taetigkeit_id = ? AND aktivVon <= now() AND (aktivBis is null OR aktivBis > now())";
+                "FROM TaetigkeitAssignment AS ta LEFT JOIN Identitaet AS id ON ta.mitglied_id = id.id " +
+                "LEFT JOIN Land ON id.land_id = Land.id " +
+                "WHERE ta.aktivVon <= now() AND (ta.aktivBis is null OR ta.aktivBis > now())";
 
-        args.add(syncTaetigkeit.getTaetigkeit_id());
+        if(syncTaetigkeit.getTaetigkeit_id() != 0) {
+            icaIdentiaeten += " AND ta.taetigkeit_id = ?";
+            args.add(syncTaetigkeit.getTaetigkeit_id());
+        }
 
         if(syncTaetigkeit.getAbteilungId() != 0) {
-            icaIdentiaeten += " AND TaetigkeitAssignment.Untergliederung_id = ?";
+            icaIdentiaeten += " AND ta.Untergliederung_id = ?";
             args.add(syncTaetigkeit.getAbteilungId());
         }
 
         if(syncTaetigkeit.getGruppierungId() != 0) {
-            icaIdentiaeten += " AND TaetigkeitAssignment.gruppierung_id = ?";
+            icaIdentiaeten += " AND ta.gruppierung_id = ?";
             args.add(syncTaetigkeit.getGruppierungId());
         }
 
-        icaIdentiaeten += " ORDER BY Identitaet.nachnameEnc";
+        icaIdentiaeten += " ORDER BY id.nachnameEnc";
 
         return jdbcTemplate.query(icaIdentiaeten,args.toArray(),new IcaIdentitaet());
     }

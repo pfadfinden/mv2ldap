@@ -5,6 +5,7 @@ import de.pfadfinden.mv.ldap.schema.IcaGruppierung;
 import de.pfadfinden.mv.model.IcaIdentitaet;
 import de.pfadfinden.mv.service.IcaService;
 import de.pfadfinden.mv.service.LdapEntryService;
+import de.pfadfinden.mv.tools.IcaUtils;
 import de.pfadfinden.mv.tools.UsernameGenerator;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
@@ -69,15 +70,17 @@ public class CommandIdentitaet {
 
     private void addIdentitaet(final IcaIdentitaet icaIdentitaet){
         logger.debug("Identitaet #{} in LDAP nicht vorhanden. Neuanlage erforderlich.",icaIdentitaet.getId());
-        if(icaIdentitaet.getEmail() == null) logger.info("Anlage Identitaet #{} erfolgt ohne Email.",icaIdentitaet.getId());
 
-        String username;
-        try {
-            username = UsernameGenerator.getUsername(icaIdentitaet.getNachname(),icaIdentitaet.getVorname());
-        } catch (IllegalArgumentException e){
-            logger.error("Anlage Identitaet #{} nicht moeglich, da Vor- oder Nachname fehlt.",icaIdentitaet.getId());
+        if(!IcaUtils.isValidIdentitaet(icaIdentitaet)){
+            logger.warn("Anlage Identitaet #{} nicht moeglich, da Vor/Nachname unplausibel.", icaIdentitaet.getId());
             return;
         }
+
+        if(icaIdentitaet.getEmail() == null){
+            logger.warn("Anlage Identitaet #{} erfolgt ohne Email.", icaIdentitaet.getId());
+        }
+
+        String username = UsernameGenerator.getUsername(icaIdentitaet.getNachname(),icaIdentitaet.getVorname());
 
         final IcaGruppierung gruppierung = ldapEntryService.findIcaGruppierungById(icaIdentitaet.getGruppierungId());
         if(gruppierung == null){

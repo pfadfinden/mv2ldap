@@ -15,13 +15,15 @@ public class UsernameGeneratorTest {
     }
 
     @Test
-    public void ersetzeUmlaute() {
+    public void prepareUsernameString() {
         assertEquals("aeoeuess",UsernameGenerator.prepareUsernameString("äöüß"));
+        assertEquals("uo",UsernameGenerator.prepareUsernameString("u!o#"));
+        assertEquals("aaa",UsernameGenerator.prepareUsernameString("áàâ"));
     }
 
-    @Test
-    public void ersetzeAccents() {
-        assertEquals("aaa",UsernameGenerator.prepareUsernameString("áàâ"));
+    @Test(expected = IllegalArgumentException.class)
+    public void prepareUsernameString_throwException() {
+        UsernameGenerator.prepareUsernameString("");
     }
 
 }

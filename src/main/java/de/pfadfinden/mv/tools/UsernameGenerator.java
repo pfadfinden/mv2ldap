@@ -1,28 +1,26 @@
 package de.pfadfinden.mv.tools;
 
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
 import java.text.Normalizer;
 
 public class UsernameGenerator {
 
     public static String getUsername(String nachname, String vorname){
-
-        if(nachname == null || nachname.trim().isEmpty()){
-            throw new IllegalArgumentException("Nachname nicht vorhanden oder leer.");
-        }
-
-        if(vorname == null || vorname.trim().isEmpty()){
-            throw new IllegalArgumentException("Vorname nicht vorhanden oder leer.");
-        }
-
         return String.format("%s.%s",prepareUsernameString(vorname),prepareUsernameString(nachname));
     }
 
     public static String prepareUsernameString(String inputString){
+        Assert.hasText(inputString,"InputString must contain text.");
 
         // Kleinschrift und Leerzeichen entfernen
         String outputString = inputString.toLowerCase().trim();
 
-        // Ersetze alle Umlaute
+        // Loesche Sonderzeichen
+        outputString = StringUtils.deleteAny(outputString,"#*.!?%_");
+
+        // Ersetze Umlaute
         outputString = outputString.replace("ü", "ue")
                 .replace("ö", "oe")
                 .replace("ä", "ae")

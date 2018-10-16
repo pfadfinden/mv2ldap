@@ -38,10 +38,10 @@ public class IcaService {
         List<Object> args = new ArrayList<>();
 
         String icaIdentiaeten = "" +
-                "SELECT Identitaet.*, Identitaet.genericField1 AS spitzname, " +
+                "SELECT ident.*, ident.genericField1 AS spitzname, " +
                 "Land.countryCode2, Land.countryCode3, Land.name AS countryName " +
-                "FROM TaetigkeitAssignment AS ta LEFT JOIN Identitaet AS id ON ta.mitglied_id = id.id " +
-                "LEFT JOIN Land ON id.land_id = Land.id " +
+                "FROM TaetigkeitAssignment AS ta LEFT JOIN Identitaet AS ident ON ta.mitglied_id = ident.id " +
+                "LEFT JOIN Land ON ident.land_id = Land.id " +
                 "WHERE ta.aktivVon <= now() AND (ta.aktivBis is null OR ta.aktivBis > now())";
 
         if(syncTaetigkeit.getTaetigkeit_id() != 0) {
@@ -59,7 +59,7 @@ public class IcaService {
             args.add(syncTaetigkeit.getGruppierungId());
         }
 
-        icaIdentiaeten += " ORDER BY id.nachnameEnc";
+        icaIdentiaeten += " ORDER BY ident.nachnameEnc";
 
         return jdbcTemplate.query(icaIdentiaeten,args.toArray(),new IcaIdentitaet());
     }

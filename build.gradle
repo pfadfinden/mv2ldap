@@ -16,13 +16,10 @@ apply plugin: 'io.spring.dependency-management'
 
 group = 'de.pfadfinden.mv'
 version = '1.0.0'
+description = 'Sync tool of BdP membership administration and user directory'
 
-description = """"""
-
-sourceCompatibility = 1.8
-tasks.withType(JavaCompile) {
-	options.encoding = 'UTF-8'
-}
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
 
 repositories {
     mavenCentral()
@@ -31,7 +28,6 @@ repositories {
 dependencies {
     compile('org.springframework.boot:spring-boot-starter')
     compile('org.springframework.boot:spring-boot-starter-jdbc')
-//    compile('org.springframework.boot:spring-boot-starter-data-ldap')
     compile('org.apache.directory.api:api-all:1.0.2')
     runtime('mysql:mysql-connector-java')
     testCompile('org.springframework.boot:spring-boot-starter-test')

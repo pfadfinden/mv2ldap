@@ -8,9 +8,9 @@ public class LdapHelper {
     final static Logger logger = LoggerFactory.getLogger(LdapHelper.class);
 
     /**
-     * Pruefe ob Modifikation eines LDAP Attributes erforderlich ist und erstelle DefaultModification
+     * Pruefe ob Modifikation eines LDAP Attributes erforderlich ist und ergaenze ModificationRequest
      */
-    public static void stringUpdateHelper(ModifyRequest request, Object fieldIca, Object fieldLdap, String field){
+    public static void modifyRequest(ModifyRequest request, Object fieldIca, Object fieldLdap, String field){
 
         // Wenn Feld in ICA leer, aber in LDAP Attribut vorhanden, dann entferne Attribut in LDAP
         if((fieldIca == null || fieldIca.toString().isEmpty()) && fieldLdap != null){

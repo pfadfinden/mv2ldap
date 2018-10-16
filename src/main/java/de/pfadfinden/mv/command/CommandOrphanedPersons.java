@@ -20,8 +20,6 @@ public class CommandOrphanedPersons {
 
     public void exec() {
         List<IcaIdentitaet> identitaetList = ldapEntryService.findOrphanedPersons();
-        identitaetList.forEach(icaIdentitaet -> {
-            logger.info("Orphaned User: {} {}",icaIdentitaet.getIcaId(),icaIdentitaet.getCn());
-        });
+        identitaetList.forEach(icaIdentitaet -> logger.info("Orphaned User: {} {}",icaIdentitaet.getIcaId(),icaIdentitaet.getCn()));
     }
 }

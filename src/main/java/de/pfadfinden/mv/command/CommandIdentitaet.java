@@ -19,9 +19,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 public class CommandIdentitaet {
-    final Logger logger = LoggerFactory.getLogger(CommandIdentitaet.class);
+    private final Logger logger = LoggerFactory.getLogger(CommandIdentitaet.class);
 
     private final IcaService icaService;
     private final LdapEntryService ldapEntryService;
@@ -36,22 +38,22 @@ public class CommandIdentitaet {
      * @param identitaet
      */
     public de.pfadfinden.mv.ldap.schema.IcaIdentitaet identitaet2Ldap(int identitaet){
-        IcaIdentitaet icaIdentitaet = icaService.findIdentitaetById(identitaet);
+        Optional<IcaIdentitaet> icaIdentitaet = icaService.findIdentitaetById(identitaet);
 
-        if(icaIdentitaet == null){
+        if(!icaIdentitaet.isPresent()){
             logger.error("Keine IcaIdentitaet Instanz zu #{} aufgebaut: Return null.",identitaet);
             return null;
         }
 
-        de.pfadfinden.mv.ldap.schema.IcaIdentitaet ldapIdentitaet = ldapEntryService.findIcaIdentitaetById(identitaet);
+        Optional<de.pfadfinden.mv.ldap.schema.IcaIdentitaet> ldapIdentitaet = ldapEntryService.findIcaIdentitaetById(identitaet);
 
-        if(ldapIdentitaet == null){
-            addIdentitaet(icaIdentitaet);
+        if(!ldapIdentitaet.isPresent()){
+            addIdentitaet(icaIdentitaet.get());
         } else {
-            if(needUpdate(icaIdentitaet,ldapIdentitaet))
-                updateIdentitaet(icaIdentitaet,ldapIdentitaet);
+            if(needUpdate(icaIdentitaet.get(),ldapIdentitaet.get()))
+                updateIdentitaet(icaIdentitaet.get(),ldapIdentitaet.get());
         }
-        return ldapEntryService.findIcaIdentitaetById(identitaet);
+        return ldapEntryService.findIcaIdentitaetById(identitaet).get();
     }
 
     /**
@@ -82,71 +84,69 @@ public class CommandIdentitaet {
 
         String username = UsernameGenerator.getUsername(icaIdentitaet.getNachname(),icaIdentitaet.getVorname());
 
-        final IcaGruppierung gruppierung = ldapEntryService.findIcaGruppierungById(icaIdentitaet.getGruppierungId());
-        if(gruppierung == null){
+        Optional<IcaGruppierung> gruppierung = ldapEntryService.findIcaGruppierungById(icaIdentitaet.getGruppierungId());
+
+        if(!gruppierung.isPresent()){
             logger.error("Identitaet #{} konnte keiner Gruppierung zugeordnet werden (ICA Gruppierung #{})",
                     icaIdentitaet.getId(),icaIdentitaet.getGruppierungId());
             return;
         }
 
-        Dn dn = null;
         try {
-            dn = new Dn(
-                    "uid", username,
-                    gruppierung.getDn().getName()
+            Dn dn = new Dn("uid", username, gruppierung.get().getDn().getName());
+
+            LdapConnectionTemplate ldapConnectionTemplate = LdapDatabase.getLdapConnectionTemplate();
+
+            AddResponse addResponse = ldapConnectionTemplate.add(dn, request -> {
+                        Entry entry = request.getEntry();
+                        entry.add("objectClass","inetOrgPerson","organizationalPerson","person",
+                                "top","icaIdentitaet","icaRecord");
+
+                        // ICA Parameter
+                        entry.add("icaId",String.valueOf(icaIdentitaet.getId()));
+                        entry.add("icaStatus",icaIdentitaet.getStatus());
+                        entry.add("icaVersion",String.valueOf(icaIdentitaet.getVersion()));
+                        entry.add("icaMitgliedsnummer",String.valueOf(icaIdentitaet.getMitgliedsNummer()));
+                        if(icaIdentitaet.getHash() != null && !icaIdentitaet.getHash().trim().isEmpty()) {
+                            entry.add("icaHash", icaIdentitaet.getHash());
+                        }
+
+                        if(icaIdentitaet.getLastUpdated() != null){
+                            entry.add("icaLastUpdated",new GeneralizedTime(icaIdentitaet.getLastUpdated()).toString());
+                        }
+
+                        // Namen
+                        entry.add("cn",icaIdentitaet.getCommonName());
+                        entry.add("displayName",icaIdentitaet.getDisplayName());
+                        entry.add("givenName",icaIdentitaet.getVorname());
+                        entry.add("sn",icaIdentitaet.getNachname());
+                        if(icaIdentitaet.getSpitzname() != null) entry.add("icaSpitzname",icaIdentitaet.getSpitzname());
+
+                        if (icaIdentitaet.getEmail() != null) {
+                            entry.add("mail", icaIdentitaet.getEmail());
+                        }
+
+                        // Telefon
+                        if(!icaIdentitaet.getTelefon1().isEmpty()) entry.add("telephoneNumber",icaIdentitaet.getTelefon1());
+                        if(!icaIdentitaet.getTelefon1().isEmpty()) entry.add("homePhone",icaIdentitaet.getTelefon1());
+                        if(!icaIdentitaet.getTelefon2().isEmpty()) entry.add("otherHomePhone",icaIdentitaet.getTelefon2());
+                        if(!icaIdentitaet.getTelefon3().isEmpty()) entry.add("mobile",icaIdentitaet.getTelefon3());
+                        if(!icaIdentitaet.getTelefax().isEmpty()) entry.add("facsimileTelephoneNumber",icaIdentitaet.getTelefax());
+
+                        // Sonstiges
+                        entry.add("ou",gruppierung.get().getIcaEbene()+" "+gruppierung.get().getOu());
+                    }
             );
+
+            if (addResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
+                logger.error("LDAP Add Identitaet #{}: {} '{}'",
+                        icaIdentitaet.getMitgliedsNummer(),
+                        addResponse.getLdapResult().getResultCode(),
+                        addResponse.getLdapResult().getDiagnosticMessage());
+            }
+
         } catch (LdapInvalidDnException e) {
             logger.error("Erstellung DN fehlerhaft",e);
-        }
-
-        LdapConnectionTemplate ldapConnectionTemplate = LdapDatabase.getLdapConnectionTemplate();
-
-        AddResponse addResponse = ldapConnectionTemplate.add(dn, request -> {
-                    Entry entry = request.getEntry();
-                    entry.add("objectClass","inetOrgPerson","organizationalPerson","person",
-                            "top","icaIdentitaet","icaRecord");
-
-                    // ICA Parameter
-                    entry.add("icaId",String.valueOf(icaIdentitaet.getId()));
-                    entry.add("icaStatus",icaIdentitaet.getStatus());
-                    entry.add("icaVersion",String.valueOf(icaIdentitaet.getVersion()));
-                    entry.add("icaMitgliedsnummer",String.valueOf(icaIdentitaet.getMitgliedsNummer()));
-                    if(icaIdentitaet.getHash() != null && !icaIdentitaet.getHash().trim().isEmpty()) {
-                        entry.add("icaHash", icaIdentitaet.getHash());
-                    }
-
-                    if(icaIdentitaet.getLastUpdated() != null){
-                        entry.add("icaLastUpdated",new GeneralizedTime(icaIdentitaet.getLastUpdated()).toString());
-                    }
-
-                    // Namen
-                    entry.add("cn",icaIdentitaet.getCommonName());
-                    entry.add("displayName",icaIdentitaet.getDisplayName());
-                    entry.add("givenName",icaIdentitaet.getVorname());
-                    entry.add("sn",icaIdentitaet.getNachname());
-                    if(icaIdentitaet.getSpitzname() != null) entry.add("icaSpitzname",icaIdentitaet.getSpitzname());
-
-                    if (icaIdentitaet.getEmail() != null) {
-                        entry.add("mail", icaIdentitaet.getEmail());
-                    }
-
-                    // Telefon
-                    if(!icaIdentitaet.getTelefon1().isEmpty()) entry.add("telephoneNumber",icaIdentitaet.getTelefon1());
-                    if(!icaIdentitaet.getTelefon1().isEmpty()) entry.add("homePhone",icaIdentitaet.getTelefon1());
-                    if(!icaIdentitaet.getTelefon2().isEmpty()) entry.add("otherHomePhone",icaIdentitaet.getTelefon2());
-                    if(!icaIdentitaet.getTelefon3().isEmpty()) entry.add("mobile",icaIdentitaet.getTelefon3());
-                    if(!icaIdentitaet.getTelefax().isEmpty()) entry.add("facsimileTelephoneNumber",icaIdentitaet.getTelefax());
-
-                    // Sonstiges
-                    entry.add("ou",gruppierung.getIcaEbene()+" "+gruppierung.getOu());
-                }
-        );
-
-        if (addResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
-            logger.error("LDAP Add Identitaet #{}: {} '{}'",
-                    icaIdentitaet.getMitgliedsNummer(),
-                    addResponse.getLdapResult().getResultCode(),
-                    addResponse.getLdapResult().getDiagnosticMessage());
         }
     }
 

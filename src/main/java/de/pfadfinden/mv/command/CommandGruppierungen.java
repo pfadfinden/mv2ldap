@@ -1,27 +1,28 @@
 package de.pfadfinden.mv.command;
 
-import java.util.Date;
-import java.util.List;
-
 import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.model.IcaGruppierung;
 import de.pfadfinden.mv.service.IcaService;
 import de.pfadfinden.mv.service.LdapEntryService;
 import de.pfadfinden.mv.tools.LdapHelper;
-import org.apache.directory.api.ldap.model.entry.*;
-import org.apache.directory.api.ldap.model.exception.LdapException;
+import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
-import org.apache.directory.api.ldap.model.message.*;
+import org.apache.directory.api.ldap.model.message.AddResponse;
+import org.apache.directory.api.ldap.model.message.ModifyResponse;
+import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.util.GeneralizedTime;
-import org.apache.directory.ldap.client.template.RequestBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+
 @Component
 public class CommandGruppierungen {
-    final Logger logger = LoggerFactory.getLogger(CommandGruppierungen.class);
+    private final Logger logger = LoggerFactory.getLogger(CommandGruppierungen.class);
 
     private IcaService icaService;
     private LdapEntryService ldapEntryService;
@@ -31,25 +32,25 @@ public class CommandGruppierungen {
         this.ldapEntryService = ldapEntryService;
     }
 
-    public void exec() throws LdapException {
+    public void exec() {
         List<IcaGruppierung> icaGruppierungList = this.icaService.getGruppierungen();
         for(IcaGruppierung icaGruppierung : icaGruppierungList){
             execGruppierung(icaGruppierung);
         }
     }
 
-    private void execGruppierung(IcaGruppierung gruppierung) throws LdapException {
+    private void execGruppierung(IcaGruppierung gruppierung) {
         logger.debug("## Start Verarbeitung Gruppierung {} ({}) ##",gruppierung.getId(),gruppierung.getName());
-        de.pfadfinden.mv.ldap.schema.IcaGruppierung ldapGruppierung = ldapEntryService.findIcaGruppierungById(gruppierung.getId());
+        Optional<de.pfadfinden.mv.ldap.schema.IcaGruppierung> ldapGruppierung = ldapEntryService.findIcaGruppierungById(gruppierung.getId());
 
-        if(ldapGruppierung == null){
+        if(!ldapGruppierung.isPresent()){
             logger.debug("Gruppierung nicht vorhanden. Neuanlage erforderlich.");
             addGruppierung(gruppierung);
         } else {
-            logger.debug("Gruppierung vorhanden. DN: {}",ldapGruppierung.getDn());
-            if(needUpdateGruppierung(gruppierung,ldapGruppierung)){
+            logger.debug("Gruppierung vorhanden. DN: {}",ldapGruppierung.get().getDn());
+            if(needUpdateGruppierung(gruppierung,ldapGruppierung.get())){
                 logger.debug("Aenderungen an Gruppierung erforderlich.");
-                updateGruppierung(gruppierung,ldapGruppierung);
+                updateGruppierung(gruppierung,ldapGruppierung.get());
             } else {
                 logger.debug("Keine Aenderungen an Gruppierung erforderlich.");
             }
@@ -76,23 +77,18 @@ public class CommandGruppierungen {
      * @return void
      * @author Philipp Steinmetzger
      */
-    private void updateGruppierung(final IcaGruppierung gruppierungIca, final de.pfadfinden.mv.ldap.schema.IcaGruppierung gruppierungLdap) throws LdapException {
-        //    Keine Modifikation der OU (Bestandteil DN) durchfuehren
+    private void updateGruppierung(final IcaGruppierung gruppierungIca, final de.pfadfinden.mv.ldap.schema.IcaGruppierung gruppierungLdap) {
+        // Keine Modifikation der OU (Bestandteil DN) durchfuehren
         ModifyResponse modResponse = LdapDatabase.getLdapConnectionTemplate().modify(
-                LdapDatabase.getLdapConnectionTemplate().newDn(gruppierungLdap.getDn().toString()),
-                new RequestBuilder<ModifyRequest>() {
-                    @Override
-                    public void buildRequest(ModifyRequest request) throws LdapException
-                    {
-                        LdapHelper.stringUpdateHelper(request,gruppierungIca.getEbeneId(),gruppierungLdap.getIcaEbene(),"icaEbene");
-                        LdapHelper.stringUpdateHelper(request,gruppierungIca.getSitzOrt(),gruppierungLdap.getIcaSitzOrt(),"icaSitzOrt");
-                        LdapHelper.stringUpdateHelper(request,gruppierungIca.getVersion(),gruppierungLdap.getIcaVersion(),"icaVersion");
-                        LdapHelper.stringUpdateHelper(request,gruppierungIca.getStatus(),gruppierungLdap.getIcaStatus(),"icaStatus");
-                        if(gruppierungLdap.getIcaLastUpdated() == null){
-                            request.add("icaLastUpdated",new GeneralizedTime(new Date()).toGeneralizedTime());
-                        } else {
-                            request.replace("icaLastUpdated",new GeneralizedTime(new Date()).toGeneralizedTime());
-                        }
+                LdapDatabase.getLdapConnectionTemplate().newDn(gruppierungLdap.getDn().toString()), request -> {
+                    LdapHelper.modifyRequest(request,gruppierungIca.getEbeneId(),gruppierungLdap.getIcaEbene(),"icaEbene");
+                    LdapHelper.modifyRequest(request,gruppierungIca.getSitzOrt(),gruppierungLdap.getIcaSitzOrt(),"icaSitzOrt");
+                    LdapHelper.modifyRequest(request,gruppierungIca.getVersion(),gruppierungLdap.getIcaVersion(),"icaVersion");
+                    LdapHelper.modifyRequest(request,gruppierungIca.getStatus(),gruppierungLdap.getIcaStatus(),"icaStatus");
+                    if(gruppierungLdap.getIcaLastUpdated() == null){
+                        request.add("icaLastUpdated",new GeneralizedTime(new Date()).toGeneralizedTime());
+                    } else {
+                        request.replace("icaLastUpdated",new GeneralizedTime(new Date()).toGeneralizedTime());
                     }
                 }
         );
@@ -102,33 +98,18 @@ public class CommandGruppierungen {
         }
     }
 
-
-    private void addGruppierung(final IcaGruppierung gruppierung) throws LdapInvalidDnException {
+    private void addGruppierung(final IcaGruppierung gruppierung) {
         if(gruppierung.getParentGruppierungId()==0) return;
-        Dn dn;
-        de.pfadfinden.mv.ldap.schema.IcaGruppierung parentGruppierung = findParentGruppierung(gruppierung);
-        if(parentGruppierung != null){
-            logger.debug("Uebergeordnete Gruppierung: {}",parentGruppierung.getDn());
-            dn = new Dn(
-                    "ou", gruppierung.getName(),
-                    parentGruppierung.getDn().getName()
-            );
 
-        } else {
-            logger.debug("Keine uebergeordnete Gruppierung gefunden.");
-            dn = new Dn(
-                    "ou", gruppierung.getName(),
-                    LdapDatabase.getBaseDn().getName()
-            );
-        }
+        Optional<de.pfadfinden.mv.ldap.schema.IcaGruppierung> parentGruppierung = ldapEntryService.findParentGruppierung(gruppierung);
 
-        logger.debug("DN fuer Gruppierung #{} lautet: {}",gruppierung.getId(),dn.toString());
+        Dn parentDn = parentGruppierung.isPresent() ? parentGruppierung.get().getDn() : LdapDatabase.getBaseDn();
 
-        AddResponse addResponse = LdapDatabase.getLdapConnectionTemplate().add(
-                dn,
-                new RequestBuilder<AddRequest>() {
-                    @Override
-                    public void buildRequest(AddRequest request) throws LdapException {
+        try {
+            Dn dn = new Dn("ou", gruppierung.getName(), parentDn.getName());
+            logger.debug("DN fuer Gruppierung #{} lautet: {}",gruppierung.getId(),dn.toString());
+
+            AddResponse addResponse = LdapDatabase.getLdapConnectionTemplate().add(dn, request -> {
                         Entry entry = request.getEntry();
                         entry.add("objectClass", "top", "organizationalUnit", "icaGruppierung");
                         entry.add("ou",gruppierung.getName());
@@ -141,17 +122,14 @@ public class CommandGruppierungen {
                         entry.add("icaEbene",gruppierung.getEbeneName());
                         if(!gruppierung.getSitzOrt().isEmpty()) entry.add("icaSitzOrt",gruppierung.getSitzOrt());
                     }
-                }
-        );
+            );
 
-        if (addResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
-            logger.error("LDAP Response in addGruppierung: {}",addResponse.getLdapResult().getDiagnosticMessage());
+            if (addResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
+                logger.error("LDAP Response in addGruppierung: {}",addResponse.getLdapResult().getDiagnosticMessage());
+            }
+        } catch (LdapInvalidDnException e) {
+            e.printStackTrace();
         }
-    }
-
-    private de.pfadfinden.mv.ldap.schema.IcaGruppierung findParentGruppierung(IcaGruppierung gruppierung){
-        logger.debug("Suche Parent Gruppierung zu {} (ParentID: {})",gruppierung.getName(),gruppierung.getParentGruppierungId());
-        return ldapEntryService.findIcaGruppierungById(gruppierung.getParentGruppierungId());
     }
 
 }

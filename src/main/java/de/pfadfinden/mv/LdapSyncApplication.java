@@ -31,7 +31,8 @@ public class LdapSyncApplication implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
+
         logger.info("Start MV LDAP Sync");
 
         this.commandGruppierungen.exec();

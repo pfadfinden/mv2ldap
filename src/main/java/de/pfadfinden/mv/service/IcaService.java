@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.sql.SQLException;
 import java.util.*;
 
 @Service
@@ -65,7 +64,7 @@ public class IcaService {
         return jdbcTemplate.query(icaIdentiaeten,args.toArray(),new IcaIdentitaet());
     }
 
-    public Set<IcaIdentitaet> findIdentitaetByBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe) throws SQLException {
+    public Set<IcaIdentitaet> findIdentitaetByBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe) {
         Set<IcaIdentitaet> icaIdentitaeten = new HashSet<>();
 
         for(SyncTaetigkeit syncTaetigkeit : berechtigungsgruppe.getTaetigkeiten()){
@@ -81,7 +80,7 @@ public class IcaService {
         return icaIdentitaeten;
     }
 
-    public IcaIdentitaet findIdentitaetById(int icaIdentitaet){
+    public Optional<IcaIdentitaet> findIdentitaetById(int icaIdentitaet){
 
         String findIdentitaetById = "" +
                 "SELECT *, Identitaet.genericField1 AS spitzname, " +
@@ -90,7 +89,7 @@ public class IcaService {
                 "LEFT JOIN Land ON Identitaet.land_id = Land.id " +
                 "WHERE Identitaet.id=?";
 
-        return jdbcTemplate.queryForObject(findIdentitaetById, new Object[]{icaIdentitaet}, new IcaIdentitaet());
+        return Optional.ofNullable(jdbcTemplate.queryForObject(findIdentitaetById, new Object[]{icaIdentitaet}, new IcaIdentitaet()));
     }
 
     public List<IcaGruppierung> getGruppierungen() {

@@ -8,18 +8,11 @@ public class IcaUtils {
 
     public static boolean isValidIdentitaet(IcaIdentitaet icaIdentitaet) {
         Assert.notNull(icaIdentitaet, "IcaIdentitaet must not be null.");
-
-        if (!IcaUtils.isValidName(icaIdentitaet.getNachname()) || !IcaUtils.isValidName(icaIdentitaet.getVorname())) {
-            return false;
-        }
-
-        return true;
+        return IcaUtils.isValidName(icaIdentitaet.getNachname()) && IcaUtils.isValidName(icaIdentitaet.getVorname());
     }
 
     public static boolean isValidName(String name) {
-        name = StringUtils.deleteAny(name,"#*.!?%_");
-        if(!StringUtils.hasText(name)) return false;
-        return true;
+        return StringUtils.hasText(StringUtils.deleteAny(name,"#*.!?%_"));
     }
 }
 

@@ -20,14 +20,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Component
 public class CommandGruppen {
-    final Logger logger = LoggerFactory.getLogger(CommandGruppen.class);
+    private final Logger logger = LoggerFactory.getLogger(CommandGruppen.class);
 
     private final CommandIdentitaet commandIdentitaet;
     private final IcaService icaService;
@@ -44,8 +44,7 @@ public class CommandGruppen {
         this.ldapEntryService = ldapEntryService;
     }
 
-    public void exec() throws SQLException {
-
+    public void exec() {
         List<SyncBerechtigungsgruppe> syncBerechtigungsgruppeList = this.syncService.getSyncGruppen();
 
         for(SyncBerechtigungsgruppe berechtigungsgruppe : syncBerechtigungsgruppeList) {
@@ -63,31 +62,22 @@ public class CommandGruppen {
     private void execBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Set<IcaIdentitaet> identitaeten) throws Exception {
         logger.info("## Berechtigungsgruppe #{} '{}' ##",berechtigungsgruppe.getId(),berechtigungsgruppe.getTitle());
 
-        Gruppe gruppe = ldapEntryService.findGruppeById(berechtigungsgruppe.getId());
+        Optional<Gruppe> gruppe = ldapEntryService.findGruppeById(berechtigungsgruppe.getId());
 
-        if(gruppe == null){
+        if(!gruppe.isPresent()){
             logger.info("Berechtigungsgruppe in LDAP nicht vorhanden.");
             addBerechtigungsgruppe(berechtigungsgruppe,identitaeten);
         } else {
-            logger.info("Berechtigungsgruppe in LDAP vorhanden: {}",gruppe.getDn());
-            updateBerechtigungsgruppe(berechtigungsgruppe,gruppe,identitaeten);
+            logger.info("Berechtigungsgruppe in LDAP vorhanden: {}",gruppe.get().getDn());
+            updateBerechtigungsgruppe(berechtigungsgruppe,gruppe.get(),identitaeten);
         }
     }
 
     private void addBerechtigungsgruppe(final SyncBerechtigungsgruppe berechtigungsgruppe, final Set<IcaIdentitaet> identitaeten) throws LdapException {
-        Dn baseDn;
-        final IcaGruppierung ownerGruppierung = ldapEntryService.findIcaGruppierungById(berechtigungsgruppe.getOwnerGruppierung());
-        if(berechtigungsgruppe.getOwnerGruppierung()!=0 && ownerGruppierung != null){
-            baseDn = new Dn(
-                    "cn", berechtigungsgruppe.getTitle(),
-                    ownerGruppierung.getDn().getName()
-            );
-        } else {
-            baseDn = new Dn(
-                    "cn", berechtigungsgruppe.getTitle(),
-                    LdapDatabase.getBaseDn().getName()
-            );
-        }
+        Optional<IcaGruppierung> ownerGruppierung = ldapEntryService.findIcaGruppierungById(berechtigungsgruppe.getOwnerGruppierung());
+
+        Dn parentDn = (berechtigungsgruppe.getOwnerGruppierung()!=0 && ownerGruppierung.isPresent()) ? ownerGruppierung.get().getDn() : LdapDatabase.getBaseDn();
+        Dn baseDn = new Dn("cn", berechtigungsgruppe.getTitle(), parentDn.getName());
 
         logger.debug("DN: {}",baseDn);
 
@@ -99,7 +89,7 @@ public class CommandGruppen {
                     if(berechtigungsgruppe.getDescription()!=null) entry.add("description",berechtigungsgruppe.getDescription());
                     entry.add("icaId",String.valueOf(berechtigungsgruppe.getId()));
                     entry.add("icaLastUpdated",new GeneralizedTime(new Date()).toString());
-                    if(ownerGruppierung != null) entry.add("icaGruppierungId",String.valueOf(berechtigungsgruppe.getOwnerGruppierung()));
+                    if(ownerGruppierung.isPresent()) entry.add("icaGruppierungId",String.valueOf(berechtigungsgruppe.getOwnerGruppierung()));
 
                     if(identitaeten.size() == 0) return;
                     for(IcaIdentitaet identitaet: identitaeten) {
@@ -120,7 +110,6 @@ public class CommandGruppen {
             logger.error(addResponse.getLdapResult().getDiagnosticMessage());
         }
 
-        return;
     }
 
     private void updateBerechtigungsgruppe(SyncBerechtigungsgruppe berechtigungsgruppe, Gruppe gruppeLdap, final Set<IcaIdentitaet> identitaeten) {
@@ -144,6 +133,5 @@ public class CommandGruppen {
         if (modifyResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
             logger.error(modifyResponse.getLdapResult().getDiagnosticMessage());
         }
-        return;
     }
 }

@@ -12,42 +12,45 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class LdapEntryService {
     private Logger logger = LoggerFactory.getLogger(LdapEntryService.class);
 
-    public IcaIdentitaet findIcaIdentitaetById(int identitaetId){
+    public Optional<IcaIdentitaet> findIcaIdentitaetById(int identitaetId){
         return findIcaById(IcaIdentitaet.getEntryMapper(),"icaIdentitaet",identitaetId);
     }
 
-    public IcaIdentitaet findIcaIdentitaetByUid(String uid){
-        Dn baseDn = LdapDatabase.getBaseDn();
-        String searchString = String.format("(&(objectClass=%s)(uid=%s))","icaIdentitaet",uid);
-        return LdapDatabase.getLdapConnectionTemplate().searchFirst(baseDn,searchString, SearchScope.SUBTREE, IcaIdentitaet.getEntryMapper());
+    public Optional<IcaGruppierung> findParentGruppierung(de.pfadfinden.mv.model.IcaGruppierung gruppierung){
+        logger.debug("Suche Parent Gruppierung zu {} (ParentID: {})",gruppierung.getName(),gruppierung.getParentGruppierungId());
+        return findIcaGruppierungById(gruppierung.getParentGruppierungId());
     }
 
-    public IcaGruppierung findIcaGruppierungById(int gruppierungId){
+    public Optional<IcaIdentitaet> findIcaIdentitaetByUid(String uid){
+        Dn baseDn = LdapDatabase.getBaseDn();
+        String searchString = String.format("(&(objectClass=%s)(uid=%s))","icaIdentitaet",uid);
+        return Optional.ofNullable(LdapDatabase.getLdapConnectionTemplate().searchFirst(baseDn,searchString, SearchScope.SUBTREE, IcaIdentitaet.getEntryMapper()));
+    }
+
+    public Optional<IcaGruppierung> findIcaGruppierungById(int gruppierungId){
         return findIcaById(IcaGruppierung.getEntryMapper(),"icaGruppierung",gruppierungId);
     }
 
-    public Gruppe findGruppeById(int gruppeId){
+    public Optional<Gruppe> findGruppeById(int gruppeId){
         return findIcaById(Gruppe.getEntryMapper(),"groupOfNames",gruppeId);
     }
 
-    public <T> T findIcaById(EntryMapper<T> mapper, String record, int identitaetId){
+    public <T> Optional<T> findIcaById(EntryMapper<T> mapper, String record, int identitaetId){
         Dn baseDn = LdapDatabase.getBaseDn();
         String searchString = String.format("(&(objectClass=%s)(icaId=%d))",record,identitaetId);
-        return LdapDatabase.getLdapConnectionTemplate().searchFirst(baseDn,searchString, SearchScope.SUBTREE, mapper);
+        return Optional.ofNullable(LdapDatabase.getLdapConnectionTemplate().searchFirst(baseDn,searchString, SearchScope.SUBTREE, mapper));
     }
 
     public List<IcaIdentitaet> findOrphanedPersons(){
         Dn baseDn = LdapDatabase.getBaseDn();
         String searchString = "(&(objectClass=person)(!(memberOf=*)))";
-        List<IcaIdentitaet> identitaetList = LdapDatabase.getLdapConnectionTemplate().search(
-                baseDn,searchString, SearchScope.SUBTREE, IcaIdentitaet.getEntryMapper()
-        );
-        return identitaetList;
+        return LdapDatabase.getLdapConnectionTemplate().search(baseDn,searchString, SearchScope.SUBTREE, IcaIdentitaet.getEntryMapper());
     }
 
 }

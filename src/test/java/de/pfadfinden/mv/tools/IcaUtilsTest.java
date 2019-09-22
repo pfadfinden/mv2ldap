@@ -38,4 +38,13 @@ public class IcaUtilsTest {
         assertFalse(IcaUtils.isValidName(null));
     }
 
+    @Test
+    public void isValidEmail() {
+        assertTrue(IcaUtils.isValidEmail("test@test.de"));
+        assertTrue(IcaUtils.isValidEmail("test@pfadfinden.de"));
+        assertFalse(IcaUtils.isValidEmail(" "));
+        assertFalse(IcaUtils.isValidEmail("m"));
+        assertFalse(IcaUtils.isValidEmail(""));
+        assertFalse(IcaUtils.isValidEmail("@"));
+    }
 }

@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        springBootVersion = '2.1.5.RELEASE'
+        springBootVersion = '2.1.8.RELEASE'
     }
     repositories {
         mavenCentral()
@@ -15,7 +15,7 @@ apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
 group = 'de.pfadfinden.mv'
-version = '1.0.0'
+version = '1.0.2'
 description = 'Sync tool of BdP membership administration and user directory'
 
 sourceCompatibility = '1.8'
@@ -26,9 +26,10 @@ repositories {
 }
 
 dependencies {
-    compile('org.springframework.boot:spring-boot-starter')
-    compile('org.springframework.boot:spring-boot-starter-jdbc')
-    compile('org.apache.directory.api:api-all:1.0.3')
-    runtime('mysql:mysql-connector-java')
-    testCompile('org.springframework.boot:spring-boot-starter-test')
+    compile 'org.springframework.boot:spring-boot-starter'
+    compile 'org.springframework.boot:spring-boot-starter-jdbc'
+    compile 'commons-validator:commons-validator:1.6'
+    compile 'org.apache.directory.api:api-all:1.0.3'
+    runtime 'mysql:mysql-connector-java'
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
 }

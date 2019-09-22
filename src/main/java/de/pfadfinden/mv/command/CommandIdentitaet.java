@@ -78,8 +78,9 @@ public class CommandIdentitaet {
             return;
         }
 
-        if(icaIdentitaet.getEmail() == null){
-            logger.warn("Anlage Identitaet #{} erfolgt ohne Email.", icaIdentitaet.getId());
+        if(!IcaUtils.isValidEmail(icaIdentitaet.getEmail())){
+            logger.warn("Anlage Identitaet #{} nicht erfolgt da Mail ungueltig.", icaIdentitaet.getId());
+            return;
         }
 
         String username = UsernameGenerator.getUsername(icaIdentitaet.getNachname(),icaIdentitaet.getVorname());

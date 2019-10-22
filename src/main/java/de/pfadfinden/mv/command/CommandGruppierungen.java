@@ -14,6 +14,9 @@ import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.util.GeneralizedTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -21,7 +24,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
-public class CommandGruppierungen {
+@Order(10)
+public class CommandGruppierungen implements ApplicationRunner {
     private final Logger logger = LoggerFactory.getLogger(CommandGruppierungen.class);
 
     private IcaService icaService;
@@ -32,7 +36,8 @@ public class CommandGruppierungen {
         this.ldapEntryService = ldapEntryService;
     }
 
-    public void exec() {
+    @Override
+    public void run(ApplicationArguments args) {
         List<IcaGruppierung> icaGruppierungList = this.icaService.getGruppierungen();
         for(IcaGruppierung icaGruppierung : icaGruppierungList){
             execGruppierung(icaGruppierung);

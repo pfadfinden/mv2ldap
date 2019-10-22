@@ -9,3 +9,13 @@ Fehler und Verbesserungsvorschläge können gerne als [Github Issue](https://git
 oder Pull Request eingestellt werden. Wir freuen uns über Mitwirkung!
 
 Kontakt: hilfe@pfadfinden.de
+
+## Ausfuehrung
+
+```
+# Normale Ausfuehrung der LDAP Synchronisation
+java -jar -Dspring.profiles.active=prod ldap-sync-1.2.0.jar 
+
+# Zusaetzlich mit Ausgabe von verwaisten Benutzern (in keiner Berechtigungsgruppe) in LDAP Verzeichnis
+java -jar -Dspring.profiles.active=prod ldap-sync-1.2.0.jar --orphaned
+```

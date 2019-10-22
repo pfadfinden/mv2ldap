@@ -18,6 +18,9 @@ import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -26,7 +29,8 @@ import java.util.Optional;
 import java.util.Set;
 
 @Component
-public class CommandGruppen {
+@Order(20)
+public class CommandGruppen implements ApplicationRunner {
     private final Logger logger = LoggerFactory.getLogger(CommandGruppen.class);
 
     private final CommandIdentitaet commandIdentitaet;
@@ -44,7 +48,8 @@ public class CommandGruppen {
         this.ldapEntryService = ldapEntryService;
     }
 
-    public void exec() {
+    @Override
+    public void run(ApplicationArguments args) {
         List<SyncBerechtigungsgruppe> syncBerechtigungsgruppeList = this.syncService.getSyncGruppen();
 
         for(SyncBerechtigungsgruppe berechtigungsgruppe : syncBerechtigungsgruppeList) {
@@ -134,4 +139,5 @@ public class CommandGruppen {
             logger.error(modifyResponse.getLdapResult().getDiagnosticMessage());
         }
     }
+
 }

@@ -1,21 +1,11 @@
-buildscript {
-    ext {
-        springBootVersion = '2.2.0.RELEASE'
-    }
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-    }
+plugins {
+    id 'org.springframework.boot' version '2.2.2.RELEASE'
+    id 'io.spring.dependency-management' version '1.0.8.RELEASE'
+    id 'java'
 }
 
-apply plugin: 'java'
-apply plugin: 'org.springframework.boot'
-apply plugin: 'io.spring.dependency-management'
-
 group = 'de.pfadfinden.mv'
-version = '1.2.0'
+version = '1.3.0'
 description = 'Sync tool of BdP membership administration and user directory'
 
 sourceCompatibility = '1.8'
@@ -26,10 +16,16 @@ repositories {
 }
 
 dependencies {
-    compile 'org.springframework.boot:spring-boot-starter'
-    compile 'org.springframework.boot:spring-boot-starter-jdbc'
-    compile 'commons-validator:commons-validator:1.6'
-    compile 'org.apache.directory.api:api-all:1.0.3'
-    runtime 'mysql:mysql-connector-java'
-    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'commons-validator:commons-validator:1.6'
+    implementation 'org.apache.directory.api:api-all:1.0.3'
+    runtimeOnly 'mysql:mysql-connector-java'
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
+}
+
+test {
+    useJUnitPlatform()
 }

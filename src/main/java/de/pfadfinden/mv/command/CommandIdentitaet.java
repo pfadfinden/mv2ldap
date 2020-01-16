@@ -1,6 +1,5 @@
 package de.pfadfinden.mv.command;
 
-import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.ldap.schema.IcaGruppierung;
 import de.pfadfinden.mv.model.IcaIdentitaet;
 import de.pfadfinden.mv.service.IcaService;
@@ -27,33 +26,35 @@ public class CommandIdentitaet {
 
     private final IcaService icaService;
     private final LdapEntryService ldapEntryService;
+    private final LdapConnectionTemplate ldapConnectionTemplate;
 
-    public CommandIdentitaet(IcaService icaService, LdapEntryService ldapEntryService) {
+    public CommandIdentitaet(IcaService icaService,
+                             LdapEntryService ldapEntryService,
+                             LdapConnectionTemplate ldapConnectionTemplate) {
         this.icaService = icaService;
         this.ldapEntryService = ldapEntryService;
+        this.ldapConnectionTemplate = ldapConnectionTemplate;
     }
 
     /**
      * Stellt sicher, dass Identitaet in LDAP vorhanden und aktuell ist.
-     * @param identitaet
+     * @param identitaetId
      */
-    public de.pfadfinden.mv.ldap.schema.IcaIdentitaet identitaet2Ldap(int identitaet){
-        Optional<IcaIdentitaet> icaIdentitaet = icaService.findIdentitaetById(identitaet);
+    public de.pfadfinden.mv.ldap.schema.IcaIdentitaet identitaet2Ldap(int identitaetId) throws Exception {
 
-        if(!icaIdentitaet.isPresent()){
-            logger.error("Keine IcaIdentitaet Instanz zu #{} aufgebaut: Return null.",identitaet);
-            return null;
-        }
+        IcaIdentitaet icaIdentitaet = icaService.findIdentitaetById(identitaetId)
+                .orElseThrow(() -> new Exception("Identitaet existiert nicht in ICA: #"+identitaetId));
 
-        Optional<de.pfadfinden.mv.ldap.schema.IcaIdentitaet> ldapIdentitaet = ldapEntryService.findIcaIdentitaetById(identitaet);
+        Optional<de.pfadfinden.mv.ldap.schema.IcaIdentitaet> ldapIdentitaet = ldapEntryService.findIcaIdentitaetById(identitaetId);
 
         if(!ldapIdentitaet.isPresent()){
-            addIdentitaet(icaIdentitaet.get());
+            addIdentitaet(icaIdentitaet);
         } else {
-            if(needUpdate(icaIdentitaet.get(),ldapIdentitaet.get()))
-                updateIdentitaet(icaIdentitaet.get(),ldapIdentitaet.get());
+            if(needUpdate(icaIdentitaet,ldapIdentitaet.get()))
+                updateIdentitaet(icaIdentitaet,ldapIdentitaet.get());
         }
-        return ldapEntryService.findIcaIdentitaetById(identitaet).get();
+        return ldapEntryService.findIcaIdentitaetById(identitaetId)
+                .orElseThrow(() -> new Exception("Identitaet konnte in LDAP weder gefunden noch angelegt werden: #"+identitaetId));
     }
 
     /**
@@ -96,9 +97,7 @@ public class CommandIdentitaet {
         try {
             Dn dn = new Dn("uid", username, gruppierung.get().getDn().getName());
 
-            LdapConnectionTemplate ldapConnectionTemplate = LdapDatabase.getLdapConnectionTemplate();
-
-            AddResponse addResponse = ldapConnectionTemplate.add(dn, request -> {
+            AddResponse addResponse = this.ldapConnectionTemplate.add(dn, request -> {
                         Entry entry = request.getEntry();
                         entry.add("objectClass","inetOrgPerson","organizationalPerson","person",
                                 "top","icaIdentitaet","icaRecord");
@@ -153,8 +152,8 @@ public class CommandIdentitaet {
 
     private void updateIdentitaet(final IcaIdentitaet icaIdentitaet, de.pfadfinden.mv.ldap.schema.IcaIdentitaet ldapIdentitaet){
         logger.debug("Identitaet #{} in LDAP vorhanden, aber Update erforderlich.",icaIdentitaet.getId());
-        ModifyResponse modResponse = LdapDatabase.getLdapConnectionTemplate().modify(
-                LdapDatabase.getLdapConnectionTemplate().newDn(ldapIdentitaet.getDn().toString()),request -> {
+        ModifyResponse modResponse = this.ldapConnectionTemplate.modify(
+                this.ldapConnectionTemplate.newDn(ldapIdentitaet.getDn().toString()),request -> {
                     request.replace("icaStatus", icaIdentitaet.getStatus());
                     request.replace("icaVersion", String.valueOf(icaIdentitaet.getVersion()));
                     request.replace("icaMitgliedsnummer", String.valueOf(icaIdentitaet.getMitgliedsNummer()));

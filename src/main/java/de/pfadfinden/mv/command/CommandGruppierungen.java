@@ -1,6 +1,5 @@
 package de.pfadfinden.mv.command;
 
-import de.pfadfinden.mv.database.LdapDatabase;
 import de.pfadfinden.mv.model.IcaGruppierung;
 import de.pfadfinden.mv.service.IcaService;
 import de.pfadfinden.mv.service.LdapEntryService;
@@ -12,6 +11,7 @@ import org.apache.directory.api.ldap.model.message.ModifyResponse;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.util.GeneralizedTime;
+import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -30,10 +30,14 @@ public class CommandGruppierungen implements ApplicationRunner {
 
     private IcaService icaService;
     private LdapEntryService ldapEntryService;
+    private LdapConnectionTemplate ldapConnectionTemplate;
 
-    public CommandGruppierungen(IcaService icaService, LdapEntryService ldapEntryService) {
+    public CommandGruppierungen(IcaService icaService,
+                                LdapEntryService ldapEntryService,
+                                LdapConnectionTemplate ldapConnectionTemplate) {
         this.icaService = icaService;
         this.ldapEntryService = ldapEntryService;
+        this.ldapConnectionTemplate = ldapConnectionTemplate;
     }
 
     @Override
@@ -84,8 +88,8 @@ public class CommandGruppierungen implements ApplicationRunner {
      */
     private void updateGruppierung(final IcaGruppierung gruppierungIca, final de.pfadfinden.mv.ldap.schema.IcaGruppierung gruppierungLdap) {
         // Keine Modifikation der OU (Bestandteil DN) durchfuehren
-        ModifyResponse modResponse = LdapDatabase.getLdapConnectionTemplate().modify(
-                LdapDatabase.getLdapConnectionTemplate().newDn(gruppierungLdap.getDn().toString()), request -> {
+        ModifyResponse modResponse = this.ldapConnectionTemplate.modify(
+                this.ldapConnectionTemplate.newDn(gruppierungLdap.getDn().toString()), request -> {
                     LdapHelper.modifyRequest(request,gruppierungIca.getEbeneId(),gruppierungLdap.getIcaEbene(),"icaEbene");
                     LdapHelper.modifyRequest(request,gruppierungIca.getSitzOrt(),gruppierungLdap.getIcaSitzOrt(),"icaSitzOrt");
                     LdapHelper.modifyRequest(request,gruppierungIca.getVersion(),gruppierungLdap.getIcaVersion(),"icaVersion");
@@ -108,13 +112,13 @@ public class CommandGruppierungen implements ApplicationRunner {
 
         Optional<de.pfadfinden.mv.ldap.schema.IcaGruppierung> parentGruppierung = ldapEntryService.findParentGruppierung(gruppierung);
 
-        Dn parentDn = parentGruppierung.isPresent() ? parentGruppierung.get().getDn() : LdapDatabase.getBaseDn();
+        Dn parentDn = parentGruppierung.isPresent() ? parentGruppierung.get().getDn() : LdapHelper.getBaseDn(ldapConnectionTemplate);
 
         try {
             Dn dn = new Dn("ou", gruppierung.getName(), parentDn.getName());
             logger.debug("DN fuer Gruppierung #{} lautet: {}",gruppierung.getId(),dn.toString());
 
-            AddResponse addResponse = LdapDatabase.getLdapConnectionTemplate().add(dn, request -> {
+            AddResponse addResponse = this.ldapConnectionTemplate.add(dn, request -> {
                         Entry entry = request.getEntry();
                         entry.add("objectClass", "top", "organizationalUnit", "icaGruppierung");
                         entry.add("ou",gruppierung.getName());
@@ -133,7 +137,7 @@ public class CommandGruppierungen implements ApplicationRunner {
                 logger.error("LDAP Response in addGruppierung: {}",addResponse.getLdapResult().getDiagnosticMessage());
             }
         } catch (LdapInvalidDnException e) {
-            e.printStackTrace();
+            logger.error("Gruppierung #{} konnte in LDAP nicht angelegt werden.",gruppierung.getId(),e);
         }
     }
 

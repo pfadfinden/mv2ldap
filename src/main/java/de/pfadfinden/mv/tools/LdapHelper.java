@@ -1,8 +1,14 @@
 package de.pfadfinden.mv.tools;
 
 import org.apache.directory.api.ldap.model.message.ModifyRequest;
+import org.apache.directory.api.ldap.model.name.Dn;
+import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Properties;
 
 public class LdapHelper {
     final static Logger logger = LoggerFactory.getLogger(LdapHelper.class);
@@ -28,6 +34,20 @@ public class LdapHelper {
             request.replace(field,fieldIca.toString());
         }
 
+    }
+
+    public static Dn getBaseDn(LdapConnectionTemplate ldapConnectionTemplate){
+        Properties prop = new Properties();
+
+        try {
+            FileReader fr = new FileReader("./config/databaseLdap.properties");
+            prop.load(fr);
+            return ldapConnectionTemplate.newDn(prop.getProperty("ldapConnection.baseDn"));
+        } catch (IOException e) {
+            logger.error("Failed creating BaseDN because reading dabaseLdap properties file failed.",e);
+        }
+
+        return ldapConnectionTemplate.newDn(prop.getProperty("ldapConnection.baseDn"));
     }
 
 }

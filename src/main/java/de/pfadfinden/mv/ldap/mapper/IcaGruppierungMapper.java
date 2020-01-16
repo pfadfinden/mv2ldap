@@ -5,11 +5,14 @@ import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.template.EntryMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
-import java.util.Date;
 
 public class IcaGruppierungMapper extends BaseMapper implements EntryMapper<IcaGruppierung>{
+
+    private final Logger logger = LoggerFactory.getLogger(IcaGruppierungMapper.class);
 
     @Override
     public IcaGruppierung map(Entry entry) throws LdapException {
@@ -22,13 +25,11 @@ public class IcaGruppierungMapper extends BaseMapper implements EntryMapper<IcaG
         gruppierung.setIcaSitzOrt(getLdapString(entry,"icaSitzOrt"));
 
         if(entry.get("icaLastUpdated") != null) {
-            Date date = new Date();
             try {
-                date = new GeneralizedTime(entry.get("icaLastUpdated").getString()).getDate();
+                gruppierung.setIcaLastUpdated(new GeneralizedTime(entry.get("icaLastUpdated").getString()).getDate());
             } catch (ParseException e) {
-                System.out.println(e);
+                logger.error("Conversion of lastUpdated timestamp of #{} failed.",gruppierung.getIcaId(),e);
             }
-            gruppierung.setIcaLastUpdated(date);
         }
         return gruppierung;
     }

@@ -75,8 +75,6 @@ public class IcaService {
             }
             icaIdentitaeten.addAll(identitaeten);
         }
-        if(icaIdentitaeten.size()==0) return null;
-
         return icaIdentitaeten;
     }
 

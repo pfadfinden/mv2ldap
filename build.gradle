@@ -19,7 +19,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'commons-validator:commons-validator:1.6'
-    implementation 'org.apache.directory.api:api-all:1.0.3'
+    implementation 'org.apache.directory.api:api-all:2.0.0'
     runtimeOnly 'mysql:mysql-connector-java'
     testImplementation('org.springframework.boot:spring-boot-starter-test') {
         exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'

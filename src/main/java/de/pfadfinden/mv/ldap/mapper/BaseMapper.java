@@ -23,7 +23,7 @@ public class BaseMapper {
         Attribute attribute = entry.get(attributeName);
         if(attribute != null) {
             List<String> values = new ArrayList<>();
-            for(Value<?> value : attribute){
+            for(Value value : attribute){
                 values.add(value.toString());
             }
             return values;

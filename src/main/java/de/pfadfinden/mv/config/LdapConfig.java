@@ -1,6 +1,6 @@
 package de.pfadfinden.mv.config;
 
-import org.apache.commons.pool.impl.GenericObjectPool;
+import org.apache.directory.ldap.client.api.DefaultLdapConnectionFactory;
 import org.apache.directory.ldap.client.api.DefaultPoolableLdapConnectionFactory;
 import org.apache.directory.ldap.client.api.LdapConnectionConfig;
 import org.apache.directory.ldap.client.api.LdapConnectionPool;
@@ -39,9 +39,8 @@ public class LdapConfig {
             config.setCredentials(prop.getProperty("ldapConnection.credentials"));
         }
 
-        GenericObjectPool.Config poolConfig = new GenericObjectPool.Config();
-        if(prop.getProperty("ldapPool.testOnBorrow").equals("true")) poolConfig.testOnBorrow = true;
-        return new LdapConnectionPool(new DefaultPoolableLdapConnectionFactory(config), poolConfig);
+        DefaultLdapConnectionFactory factory = new DefaultLdapConnectionFactory(config);
+        return new LdapConnectionPool(new DefaultPoolableLdapConnectionFactory(factory));
     }
 
     @Bean

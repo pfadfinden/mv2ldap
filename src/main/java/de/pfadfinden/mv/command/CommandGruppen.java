@@ -11,6 +11,7 @@ import de.pfadfinden.mv.tools.LdapHelper;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 import org.apache.directory.api.ldap.model.message.AddResponse;
+import org.apache.directory.api.ldap.model.message.DeleteResponse;
 import org.apache.directory.api.ldap.model.message.ModifyResponse;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.apache.directory.api.ldap.model.name.Dn;
@@ -59,16 +60,22 @@ public class CommandGruppen implements ApplicationRunner {
         logger.info("## Berechtigungsgruppe #{} '{}' ##",berechtigungsgruppe.getId(),berechtigungsgruppe.getTitle());
         berechtigungsgruppe.setTaetigkeiten(syncService.getTaetigkeitenZuBerechtigungsgruppe(berechtigungsgruppe));
         Set<IcaIdentitaet> identitaeten = icaService.findIdentitaetByBerechtigungsgruppe(berechtigungsgruppe);
-        if (identitaeten.size() == 0) return;
 
         Optional<Gruppe> gruppe = ldapEntryService.findGruppeById(berechtigungsgruppe.getId());
 
         if(!gruppe.isPresent()){
-            logger.info("Berechtigungsgruppe in LDAP nicht vorhanden.");
-            addBerechtigungsgruppe(berechtigungsgruppe,identitaeten);
+            if (identitaeten.size() != 0) {
+                logger.info("Berechtigungsgruppe in LDAP nicht vorhanden.");
+                addBerechtigungsgruppe(berechtigungsgruppe, identitaeten);
+            }
         } else {
             logger.info("Berechtigungsgruppe in LDAP bereits vorhanden: {}",gruppe.get().getDn());
-            updateBerechtigungsgruppe(gruppe.get(),identitaeten);
+            if (identitaeten.size() == 0) {
+                logger.warn("Berechtigungsgruppe '{}' ohne TaetigkeitsAssignment in MV.", berechtigungsgruppe.getTitle());
+                deleteBerechtigungsgruppe(gruppe.get());
+            } else {
+                updateBerechtigungsgruppe(gruppe.get(),identitaeten);
+            }
         }
     }
 
@@ -124,6 +131,17 @@ public class CommandGruppen implements ApplicationRunner {
 
         if (modifyResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
             logger.error(modifyResponse.getLdapResult().getDiagnosticMessage());
+        }
+    }
+
+    private void deleteBerechtigungsgruppe(Gruppe gruppeLdap) {
+        DeleteResponse deleteResponse =
+                this.ldapConnectionTemplate.delete(ldapConnectionTemplate.newDn(gruppeLdap.getDn().toString()));
+
+        if (deleteResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
+            logger.error(deleteResponse.getLdapResult().getDiagnosticMessage());
+        } else {
+            logger.info("Berechtigungsgruppe in LDAP geloescht: {}",gruppeLdap.getCn());
         }
     }
 

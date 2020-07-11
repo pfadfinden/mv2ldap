@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'de.pfadfinden.mv'
-version = '1.4.0'
+version = '1.5.0'
 description = 'Sync tool of BdP membership administration and user directory'
 
 sourceCompatibility = '1.8'

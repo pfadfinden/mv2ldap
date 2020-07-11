@@ -61,12 +61,16 @@ public class CommandGruppen implements ApplicationRunner {
         berechtigungsgruppe.setTaetigkeiten(syncService.getTaetigkeitenZuBerechtigungsgruppe(berechtigungsgruppe));
         Set<IcaIdentitaet> identitaeten = icaService.findIdentitaetByBerechtigungsgruppe(berechtigungsgruppe);
 
+        logger.info("Berechtigungsgruppe #{}' in MV {} Identitaeten.",berechtigungsgruppe.getId(),identitaeten.size());
+
         Optional<Gruppe> gruppe = ldapEntryService.findGruppeById(berechtigungsgruppe.getId());
 
         if(!gruppe.isPresent()){
             if (identitaeten.size() != 0) {
-                logger.info("Berechtigungsgruppe in LDAP nicht vorhanden.");
+                logger.info("Berechtigungsgruppe in LDAP nicht vorhanden, Anlage erforderlich.");
                 addBerechtigungsgruppe(berechtigungsgruppe, identitaeten);
+            } else {
+                logger.info("Berechtigungsgruppe in LDAP nicht vorhanden, keine Anlage da 0 Identitaeten.");
             }
         } else {
             logger.info("Berechtigungsgruppe in LDAP bereits vorhanden: {}",gruppe.get().getDn());

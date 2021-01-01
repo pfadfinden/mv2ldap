@@ -1,11 +1,11 @@
 plugins {
-    id 'org.springframework.boot' version '2.3.1.RELEASE'
-    id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+    id 'org.springframework.boot' version '2.4.1'
+    id 'io.spring.dependency-management' version '1.0.10.RELEASE'
     id 'java'
 }
 
 group = 'de.pfadfinden.mv'
-version = '1.5.0'
+version = '1.6.0'
 description = 'Sync tool of BdP membership administration and user directory'
 
 sourceCompatibility = '1.8'
@@ -18,7 +18,7 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    implementation 'commons-validator:commons-validator:1.6'
+    implementation 'commons-validator:commons-validator:1.7'
     implementation 'org.apache.directory.api:api-all:2.0.1'
     runtimeOnly 'mysql:mysql-connector-java'
     testImplementation('org.springframework.boot:spring-boot-starter-test') {

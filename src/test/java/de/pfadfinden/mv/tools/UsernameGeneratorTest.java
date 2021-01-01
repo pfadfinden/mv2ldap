@@ -1,8 +1,9 @@
 package de.pfadfinden.mv.tools;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class UsernameGeneratorTest {
 
@@ -21,9 +22,9 @@ public class UsernameGeneratorTest {
         assertEquals("aaa",UsernameGenerator.prepareUsernameString("áàâ"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void prepareUsernameString_throwException() {
-        UsernameGenerator.prepareUsernameString("");
+        assertThrows(IllegalArgumentException.class,() -> UsernameGenerator.prepareUsernameString(""));
     }
 
 }

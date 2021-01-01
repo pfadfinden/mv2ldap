@@ -107,7 +107,7 @@ public class CommandGruppen implements ApplicationRunner {
                         try{
                             entry.add("member",commandIdentitaet.identitaet2Ldap(identitaet.getId()).getDn().getName());
                         } catch (Exception e){
-                            logger.warn("Hinzufuegen Identitaet '{}' zu Gruppe fehlgeschlagen.",identitaet.getId(),e);
+                            logger.warn("Hinzufuegen Identitaet '{}' zu Gruppe fehlgeschlagen.",identitaet.getId());
                         }
                     }
                 });
@@ -128,7 +128,7 @@ public class CommandGruppen implements ApplicationRunner {
                         try{
                             request.add("member", commandIdentitaet.identitaet2Ldap(identitaet.getId()).getDn().getName());
                         } catch (Exception e){
-                            logger.warn("Hinzufuegen Identitaet '{}' zu Gruppe fehlgeschlagen.",identitaet.getId(),e);
+                            logger.warn("Hinzufuegen Identitaet '{}' zu Gruppe fehlgeschlagen.",identitaet.getId());
                         }
                     }
                 });

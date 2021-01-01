@@ -13,7 +13,7 @@ import java.util.List;
 @Service
 public class SyncService {
 
-    private Logger logger = LoggerFactory.getLogger(SyncService.class);
+    private final Logger logger = LoggerFactory.getLogger(SyncService.class);
 
     private final JdbcTemplate jdbcTemplate;
 

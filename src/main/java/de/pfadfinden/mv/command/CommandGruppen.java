@@ -7,7 +7,6 @@ import de.pfadfinden.mv.model.SyncBerechtigungsgruppe;
 import de.pfadfinden.mv.service.IcaService;
 import de.pfadfinden.mv.service.LdapEntryService;
 import de.pfadfinden.mv.service.SyncService;
-import de.pfadfinden.mv.tools.LdapHelper;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 import org.apache.directory.api.ldap.model.message.AddResponse;
@@ -87,7 +86,7 @@ public class CommandGruppen implements ApplicationRunner {
         Optional<IcaGruppierung> ownerGruppierung = ldapEntryService.findIcaGruppierungById(berechtigungsgruppe.getOwnerGruppierung());
 
         Dn parentDn = (berechtigungsgruppe.getOwnerGruppierung()!=0 && ownerGruppierung.isPresent()) ?
-                ownerGruppierung.get().getDn() : LdapHelper.getBaseDn(this.ldapConnectionTemplate);
+                ownerGruppierung.get().getDn() : this.ldapEntryService.getBaseDn();
         Dn baseDn = this.getBaseDn(parentDn,berechtigungsgruppe);
         if (baseDn == null) return;
 

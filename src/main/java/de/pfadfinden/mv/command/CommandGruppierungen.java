@@ -28,9 +28,9 @@ import java.util.Optional;
 public class CommandGruppierungen implements ApplicationRunner {
     private final Logger logger = LoggerFactory.getLogger(CommandGruppierungen.class);
 
-    private IcaService icaService;
-    private LdapEntryService ldapEntryService;
-    private LdapConnectionTemplate ldapConnectionTemplate;
+    private final IcaService icaService;
+    private final LdapEntryService ldapEntryService;
+    private final LdapConnectionTemplate ldapConnectionTemplate;
 
     public CommandGruppierungen(IcaService icaService,
                                 LdapEntryService ldapEntryService,
@@ -83,7 +83,6 @@ public class CommandGruppierungen implements ApplicationRunner {
     /**
      * Fuehre Aktualisierung einer Gruppierung durch, indem Attribute ergazent, aktualisiert oder geloescht werden.
      *
-     * @return void
      * @author Philipp Steinmetzger
      */
     private void updateGruppierung(final IcaGruppierung gruppierungIca, final de.pfadfinden.mv.ldap.schema.IcaGruppierung gruppierungLdap) {
@@ -112,11 +111,11 @@ public class CommandGruppierungen implements ApplicationRunner {
 
         Optional<de.pfadfinden.mv.ldap.schema.IcaGruppierung> parentGruppierung = ldapEntryService.findParentGruppierung(gruppierung);
 
-        Dn parentDn = parentGruppierung.isPresent() ? parentGruppierung.get().getDn() : LdapHelper.getBaseDn(ldapConnectionTemplate);
+        Dn parentDn = parentGruppierung.isPresent() ? parentGruppierung.get().getDn() : this.ldapEntryService.getBaseDn();
 
         try {
             Dn dn = new Dn("ou", gruppierung.getName(), parentDn.getName());
-            logger.debug("DN fuer Gruppierung #{} lautet: {}",gruppierung.getId(),dn.toString());
+            logger.debug("DN fuer Gruppierung #{} lautet: {}",gruppierung.getId(),dn);
 
             AddResponse addResponse = this.ldapConnectionTemplate.add(dn, request -> {
                         Entry entry = request.getEntry();

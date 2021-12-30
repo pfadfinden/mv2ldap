@@ -3,13 +3,13 @@ package de.pfadfinden.mv.service;
 import de.pfadfinden.mv.ldap.schema.Gruppe;
 import de.pfadfinden.mv.ldap.schema.IcaGruppierung;
 import de.pfadfinden.mv.ldap.schema.IcaIdentitaet;
-import de.pfadfinden.mv.tools.LdapHelper;
 import org.apache.directory.api.ldap.model.message.SearchScope;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.ldap.client.template.EntryMapper;
 import org.apache.directory.ldap.client.template.LdapConnectionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,7 +19,10 @@ import java.util.Optional;
 public class LdapEntryService {
 
     private final LdapConnectionTemplate ldapConnectionTemplate;
-    private Logger logger = LoggerFactory.getLogger(LdapEntryService.class);
+    private final Logger logger = LoggerFactory.getLogger(LdapEntryService.class);
+
+    @Value("${app.ldap.base-dn}")
+    private String baseDn;
 
     public LdapEntryService(LdapConnectionTemplate ldapConnectionTemplate) {
         this.ldapConnectionTemplate = ldapConnectionTemplate;
@@ -58,8 +61,8 @@ public class LdapEntryService {
         return this.ldapConnectionTemplate.search(this.getBaseDn(),searchString, SearchScope.SUBTREE, IcaIdentitaet.getEntryMapper());
     }
 
-    private Dn getBaseDn(){
-        return LdapHelper.getBaseDn(this.ldapConnectionTemplate);
+    public Dn getBaseDn(){
+        return this.ldapConnectionTemplate.newDn(this.baseDn);
     }
 
 }

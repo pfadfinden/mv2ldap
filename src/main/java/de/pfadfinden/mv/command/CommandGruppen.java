@@ -60,7 +60,9 @@ public class CommandGruppen implements ApplicationRunner {
         berechtigungsgruppe.setTaetigkeiten(syncService.getTaetigkeitenZuBerechtigungsgruppe(berechtigungsgruppe));
         Set<IcaIdentitaet> identitaeten = icaService.findIdentitaetByBerechtigungsgruppe(berechtigungsgruppe);
 
-        logger.info("Berechtigungsgruppe #{}' in MV {} Identitaeten.",berechtigungsgruppe.getId(),identitaeten.size());
+        logger.info("Berechtigungsgruppe #{} hat {} Identitaeten in MV.",
+                berechtigungsgruppe.getId(),
+                identitaeten.size());
 
         Optional<Gruppe> gruppe = ldapEntryService.findGruppeById(berechtigungsgruppe.getId());
 
@@ -112,7 +114,9 @@ public class CommandGruppen implements ApplicationRunner {
                 });
 
         if (addResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
-            logger.error(addResponse.getLdapResult().getDiagnosticMessage());
+            logger.error("Anlage Berechtigungsgruppe fehlgeschlagen. ResultCode={} DiagnosticMessage={}",
+                    addResponse.getLdapResult().getResultCode(),
+                    addResponse.getLdapResult().getDiagnosticMessage());
         }
 
     }
@@ -133,7 +137,9 @@ public class CommandGruppen implements ApplicationRunner {
                 });
 
         if (modifyResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
-            logger.error(modifyResponse.getLdapResult().getDiagnosticMessage());
+            logger.error("Update Berechtigungsgruppe fehlgeschlagen. ResultCode={} DiagnosticMessage={}",
+                    modifyResponse.getLdapResult().getResultCode(),
+                    modifyResponse.getLdapResult().getDiagnosticMessage());
         }
     }
 
@@ -142,7 +148,9 @@ public class CommandGruppen implements ApplicationRunner {
                 this.ldapConnectionTemplate.delete(ldapConnectionTemplate.newDn(gruppeLdap.getDn().toString()));
 
         if (deleteResponse.getLdapResult().getResultCode() != ResultCodeEnum.SUCCESS){
-            logger.error(deleteResponse.getLdapResult().getDiagnosticMessage());
+            logger.error("Löschen Berechtigungsgruppe fehlgeschlagen. ResultCode={} DiagnosticMessage={}",
+                    deleteResponse.getLdapResult().getResultCode(),
+                    deleteResponse.getLdapResult().getDiagnosticMessage());
         } else {
             logger.info("Berechtigungsgruppe in LDAP geloescht: {}",gruppeLdap.getCn());
         }
